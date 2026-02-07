@@ -1,54 +1,45 @@
 package org.example;
-
 import javafx.application.Application;
-import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 public class MainApp extends Application {
 
     @Override
-    public void start(Stage stage) {
-        // ১. একটি টেক্সট ফিল্ড (যেখানে ইউজার নাম লিখবে)
-        TextField nameInput = new TextField();
-        nameInput.setPromptText("আপনার নাম লিখুন quick...");
-        nameInput.setMaxWidth(200); // বক্সটি বেশি বড় না হওয়ার জন্য
+    public void start(Stage primaryStage) {
+        // ১. একটি ক্যানভাস তৈরি করলাম (এটি আপনার ড্রয়িং পেপার)
+        // ক্যানভাসের সাইজ: প্রস্থ ৬০০, উচ্চতা ৪০০
+        Canvas canvas = new Canvas(600, 400);
 
-        // ২. একটি লেবেল (যেখানে মেসেজ দেখাবে)
-        Label messageLabel = new Label("স্বাগতম!");
-        messageLabel.setFont(new Font("Arial", 16));
+        // ২. "কলম" বা GraphicsContext নিলাম
+        GraphicsContext gc = canvas.getGraphicsContext2D();
 
-        // ৩. একটি বাটন
-        Button clickMeBtn = new Button("আমাকে ক্লিক করুন");
+        // ৩. ড্রয়িং শুরু (লাইন আঁকা)
+        // ধাপ ক: লাইনের কালার ঠিক করা
+        gc.setStroke(Color.RED);
 
-        // ৪. বাটনে ক্লিক করলে কী হবে (Action Event)
-        clickMeBtn.setOnAction(e -> {
-            String name = nameInput.getText();
-            if (!name.isEmpty()) {
-                messageLabel.setText("হ্যালো, " + name + " bokachoda    ! JavaFX শেখা শুরু!");
-            } else {
-                messageLabel.setText("দয়া করে আগে নাম লিখুন!");
-            }
-        });
+        // ধাপ খ: লাইনটি কতটুকু মোটা হবে (Thickness)
+        gc.setLineWidth(5);
 
-        // ৫. লেআউট (VBox সব কিছু উপর থেকে নিচে সাজায়)
-        VBox root = new VBox(15); // ১০ পিক্সেল গ্যাপ
-        root.setAlignment(Pos.CENTER); // সব মাঝখানে থাকবে
-        root.getChildren().addAll(messageLabel, nameInput, clickMeBtn);
+        // ধাপ গ: লাইন আঁকা (Main Logic)
+        // gc.strokeLine(x1, y1, x2, y2);
+        // (50, 50) বিন্দু থেকে (500, 350) বিন্দু পর্যন্ত লাইন হবে
+        gc.strokeLine(50, 50, 500, 350);
 
-        // ৬. সিন এবং স্টেজ সেটআপ
-        Scene scene = new Scene(root, 400, 300);
-        stage.setTitle("My First Interactive App");
-        stage.setScene(scene);
-        stage.show();
+        // ৪. স্টেজ এবং সিন সেটআপ (উইন্ডো তৈরি)
+        Group root = new Group(canvas); // ক্যানভাসটি গ্রুপে রাখলাম
+        Scene scene = new Scene(root, 600, 400); // উইন্ডোর সাইজ ঠিক করলাম
+
+        primaryStage.setTitle("Simple Line Plot Demo"); // টাইটেল
+        primaryStage.setScene(scene);
+        primaryStage.show(); // উইন্ডো দেখানো
     }
 
     public static void main(String[] args) {
-        launch();
+        launch(args); // অ্যাপলিকেশন স্টার্ট
     }
 }
