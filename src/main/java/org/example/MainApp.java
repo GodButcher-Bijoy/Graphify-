@@ -30,7 +30,7 @@ public class MainApp extends Application {
         clickMeBtn.setOnAction(e -> {
             String name = nameInput.getText();
             if (!name.isEmpty()) {
-                messageLabel.setText("হ্যালো, " + name + "! JavaFX শেখা শুরু!");
+                messageLabel.setText("হ্যালো, " + name + " bokachoda    ! JavaFX শেখা শুরু!");
             } else {
                 messageLabel.setText("দয়া করে আগে নাম লিখুন!");
             }
