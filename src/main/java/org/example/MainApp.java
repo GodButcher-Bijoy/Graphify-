@@ -45,8 +45,10 @@ public class MainApp extends Application {
     private VBox functionContainer; // Holds all input boxes
     private static final double SCALE = 40; // 1 unit = 40 pixels
 
+
     // Colors for different graphs (cycle through these)
-    private final Color[] graphColors = {Color.RED, Color.BLUE, Color.GREEN, Color.ORANGE, Color.MAGENTA};
+    private final Color[] graphColors = {Color.RED, Color.BLUE, Color.GREEN, Color.ORANGE, Color.MAGENTA,Color.CYAN};
+    private int globalColorIndex = 0;
 
     @Override
     public void start(Stage stage) {
@@ -193,19 +195,20 @@ public class MainApp extends Application {
         drawGrid(width, height);
         drawAxes(width, height);
 
-        int colorIndex = 0;
+        // এখানে int colorIndex = 0; আর লাগবে না, মুছে ফেলো।
 
-        // 🔥 আপডেট: এখন প্রতিটি চাইল্ড হলো VBox (Main Row)
         for (javafx.scene.Node node : functionContainer.getChildren()) {
             if (node instanceof VBox) {
                 VBox mainRow = (VBox) node;
 
-                // ১. ইনপুট বক্স বের করা
+                // ১. ইমপ্লিসিটলি সেভ করা কালারটা বের করা
+                Color rowColor = (Color) mainRow.getUserData();
+                if (rowColor == null) rowColor = Color.BLACK; // Fallback
+
                 StackPane inputWrapper = (StackPane) mainRow.getChildren().get(0);
                 TextField inputBox = (TextField) inputWrapper.getChildren().get(0);
                 String equation = inputBox.getText();
 
-                // ২. ভেরিয়েবল মান বের করা (স্লাইডার থেকে)
                 VBox sliderContainer = (VBox) mainRow.getChildren().get(1);
                 Map<String, Double> variables = new HashMap<>();
 
@@ -222,9 +225,10 @@ public class MainApp extends Application {
                 }
 
                 if (!equation.trim().isEmpty()) {
-                    gc.setStroke(graphColors[colorIndex % graphColors.length]);
-                    plotEquation(equation, variables, width, height); // ভেরিয়েবল পাস করছি
-                    colorIndex++;
+                    // ২. এই কালার দিয়েই গ্রাফ আঁকা হবে
+                    gc.setStroke(rowColor);
+                    plotEquation(equation, variables, width, height);
+                    // colorIndex++; // এই লাইন এখন দরকার নেই
                 }
             }
         }
@@ -334,13 +338,26 @@ public class MainApp extends Application {
         VBox mainRow = new VBox(5);
         mainRow.setStyle("-fx-background-color: transparent;");
 
+        // ১. কালার অ্যাসাইন করা (স্থায়ীভাবে)
+        Color assignedColor = graphColors[globalColorIndex % graphColors.length];
+        globalColorIndex++;
+
+        // কালারটা রোর (Row) মেমোরিতে সেভ করে রাখা
+        mainRow.setUserData(assignedColor);
+
         StackPane inputWrapper = new StackPane();
         inputWrapper.setAlignment(Pos.CENTER_RIGHT);
 
+        // ২. কালার ডট (Dot) তৈরি
+        javafx.scene.shape.Circle colorDot = new javafx.scene.shape.Circle(6, assignedColor); // Radius = 6
+        StackPane.setAlignment(colorDot, Pos.CENTER_LEFT); // বাম পাশে সেট করা
+        StackPane.setMargin(colorDot, new Insets(0, 0, 0, 15)); // বাম পাশ থেকে ১৫ পিক্সেল দূরে
+
         TextField inputBox = new TextField();
-        inputBox.setPromptText("Ex: ax + b (Use * for mult)"); // Hint updated
+        inputBox.setPromptText("Ex: ax + b");
         inputBox.setPrefHeight(50);
-        inputBox.setPadding(new Insets(5, 80, 5, 10)); // Padding increased for icons
+        // বাম পাশে প্যাডিং বাড়ানো হলো (৩৫) যাতে ডটের নিচে লেখা না পড়ে
+        inputBox.setPadding(new Insets(5, 80, 5, 35));
 
         inputBox.setStyle(
                 "-fx-background-color: White; -fx-background-radius: 10; " +
@@ -349,40 +366,34 @@ public class MainApp extends Application {
         );
 
         // --- ICONS SETUP ---
-        HBox buttonBox = new HBox(8); // Gap between icons
+        HBox buttonBox = new HBox(8);
         buttonBox.setAlignment(Pos.CENTER);
         buttonBox.setMaxWidth(70);
         StackPane.setMargin(buttonBox, new Insets(0, 10, 0, 0));
 
-        // Settings Icon (SVG Path)
         Button settingsBtn = createIconButton(
                 "M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z",
                 "gray", 18
         );
 
-        // Delete/Trash Icon (SVG Path)
         Button closeBtn = createIconButton(
                 "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
                 "gray", 18
         );
 
-        // Hover effects for Delete
+        // Hover effects
         closeBtn.setOnMouseEntered(e -> ((javafx.scene.shape.SVGPath)closeBtn.getGraphic()).setFill(Color.RED));
         closeBtn.setOnMouseExited(e -> ((javafx.scene.shape.SVGPath)closeBtn.getGraphic()).setFill(Color.GRAY));
-
-        // Hover effects for Settings
         settingsBtn.setOnMouseEntered(e -> ((javafx.scene.shape.SVGPath)settingsBtn.getGraphic()).setFill(Color.web("#9D00FF")));
         settingsBtn.setOnMouseExited(e -> ((javafx.scene.shape.SVGPath)settingsBtn.getGraphic()).setFill(Color.GRAY));
 
         buttonBox.getChildren().addAll(settingsBtn, closeBtn);
 
-        // Slider Container
         VBox sliderContainer = new VBox(10);
         sliderContainer.setPadding(new Insets(0, 0, 0, 20));
         sliderContainer.setVisible(false);
         sliderContainer.setManaged(false);
 
-        // Actions
         settingsBtn.setOnAction(e -> {
             boolean isVisible = sliderContainer.isVisible();
             sliderContainer.setVisible(!isVisible);
@@ -401,13 +412,11 @@ public class MainApp extends Application {
         };
         closeBtn.setOnAction(e -> deleteAction.run());
 
-        // 🔥 New Logic: Update variables on type
         inputBox.textProperty().addListener((obs, oldVal, newVal) -> {
             updateVariables(newVal, sliderContainer);
             drawGraph();
         });
 
-        // Key Logic
         inputBox.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
                 addFunctionInputBox(container);
@@ -423,7 +432,8 @@ public class MainApp extends Application {
             }
         });
 
-        inputWrapper.getChildren().addAll(inputBox, buttonBox);
+        // ৩. বক্সের স্ট্রাকচারে কালার ডট যোগ করা হলো
+        inputWrapper.getChildren().addAll(inputBox, colorDot, buttonBox);
         mainRow.getChildren().addAll(inputWrapper, sliderContainer);
         container.getChildren().add(mainRow);
         inputBox.requestFocus();
