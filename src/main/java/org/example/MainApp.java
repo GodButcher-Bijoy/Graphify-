@@ -2,57 +2,53 @@ package org.example;
 
 import javafx.animation.*;
 import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.layout.Pane;
+import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.SVGPath;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
-import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import javafx.geometry.Insets;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextField;
-import javafx.scene.control.Button;
-import javafx.scene.control.Slider;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.StackPane;
-import javafx.geometry.Pos;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseEvent;
 import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainApp extends Application {
 
-    // Global variables for Graphing
+    // --- GLOBAL STATE (From first.java logic) ---
+    private static final double DEFAULT_SCALE = 40;
+    private double scale = DEFAULT_SCALE; // Pixels per unit
+    private double offsetX = 0; // Panning X (Future proofing)
+    private double offsetY = 0; // Panning Y
+
+    // Global Variable Store (Name -> Value)
+    private final Map<String, Double> variables = new HashMap<>();
+
+    // UI Components
     private Canvas canvas;
     private GraphicsContext gc;
-    private VBox functionContainer; // Holds all input boxes
-    private static final double SCALE = 40; // 1 unit = 40 pixels
+    private VBox functionContainer; // Holds all input rows
 
-
-    // Colors for different graphs (cycle through these)
-    private final Color[] graphColors = {Color.RED, Color.BLUE, Color.GREEN, Color.ORANGE, Color.MAGENTA,Color.CYAN};
+    // Styling Constants (From MainApp.java)
+    private final Color[] graphColors = {Color.RED, Color.BLUE, Color.GREEN, Color.ORANGE, Color.MAGENTA, Color.CYAN};
     private int globalColorIndex = 0;
 
     @Override
     public void start(Stage stage) {
-        // --- INTRO ANIMATION SETUP ---
+        // --- 1. INTRO ANIMATION (From MainApp.java) ---
         Pane root = new Pane();
         double width = 900;
         double height = 600;
@@ -68,13 +64,13 @@ public class MainApp extends Application {
         vLine.setStrokeWidth(5);
         vLine.setScaleY(0);
 
-        Text title = new Text("Graphify");
+        Text title = new Text("Graphify Pro");
         title.setFont(Font.font("Pristina", FontWeight.BOLD, 85));
         title.setStroke(Color.WHITE);
         title.setStrokeWidth(0.3);
         title.setFill(Color.TRANSPARENT);
         title.setOpacity(0);
-        title.setX((width / 2) - 120);
+        title.setX((width / 2) - 160);
         title.setY(height / 2);
 
         root.getChildren().addAll(hLine, vLine, title);
@@ -111,57 +107,50 @@ public class MainApp extends Application {
         });
 
         Scene scene = new Scene(root, width, height);
-        stage.setTitle("Graphify Intro");
+        stage.setTitle("Graphify Pro - Ultimate Edition");
         stage.setScene(scene);
         stage.show();
     }
 
-    // --- MAIN APP SCENE ---
+    // --- 2. MAIN LAYOUT (MainApp Design) ---
     private Scene createMainScene(Stage stage) {
         BorderPane root = new BorderPane();
 
-        // 1. SIDEBAR
+        // A. SIDEBAR
         VBox sidebar = new VBox(15);
-        sidebar.setPadding(new Insets(100, 30, 30, 30)); // Your specific padding
-        sidebar.setPrefWidth(400);
+        sidebar.setPadding(new Insets(100, 30, 30, 30));
+        sidebar.setPrefWidth(420);
         sidebar.setAlignment(Pos.TOP_CENTER);
-        sidebar.setStyle("-fx-background-color: #121212; -fx-border-color: Purple; -fx-border-width: 4px; -fx-border-style: solid inside;");
+        // MainApp Dark Theme
+        sidebar.setStyle("-fx-background-color: #121212; -fx-border-color: Purple; -fx-border-width: 0 4px 0 0;");
 
-        Label inputLabel = new Label("Enter Functions:");
+        Label inputLabel = new Label("Functions:");
         inputLabel.setTextFill(Color.DEEPPINK);
         inputLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 22));
 
-        // Initialize Function Container
-        functionContainer = new VBox(40); // Your specific spacing
+        functionContainer = new VBox(25);
         functionContainer.setStyle("-fx-background-color: transparent;");
 
-        // Add initial inputs
-        for (int i = 0; i < 3; i++) {
-            addFunctionInputBox(functionContainer);
-        }
+        // Add initial input
+        addFunctionInputBox();
 
         ScrollPane scrollPane = new ScrollPane(functionContainer);
-        VBox.setMargin(scrollPane, new Insets(80, 0, 0, 0)); // Your margin
+        VBox.setMargin(scrollPane, new Insets(20, 0, 0, 0));
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 
-        // X-Range Inputs
-        Label rangeLabel = new Label("X Range (Min, Max):");
-        rangeLabel.setTextFill(Color.LIGHTGRAY);
-        HBox rangeBox = new HBox(10);
-        TextField minInput = new TextField("-10");
-        TextField maxInput = new TextField("10");
-        String rangeStyle = "-fx-background-color: #1F1F1F; -fx-text-fill: white; -fx-border-color: gray; -fx-border-radius: 5;";
-        minInput.setStyle(rangeStyle); maxInput.setStyle(rangeStyle);
-        rangeBox.getChildren().addAll(minInput, maxInput);
+        // Control info
+        Label helpLabel = new Label("Scroll to Zoom\nDrag sliders to update");
+        helpLabel.setTextFill(Color.GRAY);
+        helpLabel.setStyle("-fx-font-style: italic;");
 
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
-        sidebar.getChildren().addAll(inputLabel, scrollPane, rangeLabel, rangeBox);
+        sidebar.getChildren().addAll(inputLabel, scrollPane, helpLabel);
 
-        // 2. GRAPH AREA
+        // B. GRAPH AREA
         Pane graphPane = new Pane();
-        graphPane.setStyle("-fx-background-color: #ECF0F1; -fx-border-color: Purple; -fx-border-width: 4px; -fx-border-style: solid inside;");
+        graphPane.setStyle("-fx-background-color: #ECF0F1;"); // Light background for graph
 
         canvas = new Canvas();
         gc = canvas.getGraphicsContext2D();
@@ -169,281 +158,456 @@ public class MainApp extends Application {
         canvas.widthProperty().bind(graphPane.widthProperty());
         canvas.heightProperty().bind(graphPane.heightProperty());
 
+        // Listeners for Redraw
         canvas.widthProperty().addListener(evt -> drawGraph());
         canvas.heightProperty().addListener(evt -> drawGraph());
 
-        canvas.setOnMouseMoved(e -> {
-            drawGraph();
-            checkAndDrawHoverPoint(e);
-        });
+        // Zoom Logic (From first.java)
+        canvas.setOnScroll(this::handleZoom);
 
         graphPane.getChildren().add(canvas);
 
         root.setLeft(sidebar);
         root.setCenter(graphPane);
 
-        return new Scene(root, 1000, 700);
+        return new Scene(root, 1100, 750);
     }
 
-    // --- GRAPHING LOGIC ---
-
-    private void drawGraph() {
-        double width = canvas.getWidth();
-        double height = canvas.getHeight();
-
-        gc.clearRect(0, 0, width, height);
-        drawGrid(width, height);
-        drawAxes(width, height);
-
-        // এখানে int colorIndex = 0; আর লাগবে না, মুছে ফেলো।
-
-        for (javafx.scene.Node node : functionContainer.getChildren()) {
-            if (node instanceof VBox) {
-                VBox mainRow = (VBox) node;
-
-                // ১. ইমপ্লিসিটলি সেভ করা কালারটা বের করা
-                Color rowColor = (Color) mainRow.getUserData();
-                if (rowColor == null) rowColor = Color.BLACK; // Fallback
-
-                StackPane inputWrapper = (StackPane) mainRow.getChildren().get(0);
-                TextField inputBox = (TextField) inputWrapper.getChildren().get(0);
-                String equation = inputBox.getText();
-
-                VBox sliderContainer = (VBox) mainRow.getChildren().get(1);
-                Map<String, Double> variables = new HashMap<>();
-
-                for(javafx.scene.Node sliderRow : sliderContainer.getChildren()) {
-                    if(sliderRow instanceof HBox) {
-                        HBox row = (HBox) sliderRow;
-                        Label lbl = (Label) row.getChildren().get(0);
-                        String varName = lbl.getText().replace(" = ", "");
-                        TextField valInput = (TextField) row.getChildren().get(2);
-                        try {
-                            variables.put(varName, Double.parseDouble(valInput.getText()));
-                        } catch (Exception e) {}
-                    }
-                }
-
-                if (!equation.trim().isEmpty()) {
-                    // ২. এই কালার দিয়েই গ্রাফ আঁকা হবে
-                    gc.setStroke(rowColor);
-                    plotEquation(equation, variables, width, height);
-                    // colorIndex++; // এই লাইন এখন দরকার নেই
-                }
-            }
-        }
-    }
-
-    private void plotEquation(String equation, Map<String, Double> variables, double width, double height) {
-        String cleanEq = cleanEquation(equation);
-        double centerX = width / 2.0;
-        double centerY = height / 2.0;
-
-        try {
-            ExpressionBuilder builder = new ExpressionBuilder(cleanEq).variable("x");
-            // ডাইনামিক ভেরিয়েবল ডিক্লেয়ার
-            for(String var : variables.keySet()) builder.variable(var);
-
-            Expression expr = builder.build();
-            // মান সেট করা
-            for(Map.Entry<String, Double> entry : variables.entrySet()) {
-                expr.setVariable(entry.getKey(), entry.getValue());
-            }
-
-            gc.setLineWidth(2.5);
-            gc.beginPath();
-            boolean firstPoint = true;
-
-            for (double screenX = 0; screenX <= width; screenX++) {
-                double mathX = (screenX - centerX) / SCALE;
-                try {
-                    expr.setVariable("x", mathX);
-                    double mathY = expr.evaluate();
-
-                    if (Double.isNaN(mathY) || Double.isInfinite(mathY)) continue;
-                    double screenY = centerY - (mathY * SCALE);
-
-                    if (screenY < -height || screenY > height * 2) {
-                        firstPoint = true; continue;
-                    }
-
-                    if (firstPoint) { gc.moveTo(screenX, screenY); firstPoint = false; }
-                    else { gc.lineTo(screenX, screenY); }
-                } catch (Exception e) {}
-            }
-            gc.stroke();
-        } catch (Exception e) { }
-    }
-
-    private void checkAndDrawHoverPoint(MouseEvent e) {
-        double mouseX = e.getX();
-        double mouseY = e.getY();
-        double width = canvas.getWidth();
-        double height = canvas.getHeight();
-        double centerX = width / 2.0;
-        double centerY = height / 2.0;
-        double mathX = (mouseX - centerX) / SCALE;
-
-        for (javafx.scene.Node node : functionContainer.getChildren()) {
-            if (node instanceof VBox) {
-                VBox mainRow = (VBox) node;
-                StackPane inputWrapper = (StackPane) mainRow.getChildren().get(0);
-                TextField inputBox = (TextField) inputWrapper.getChildren().get(0);
-                String equation = inputBox.getText();
-
-                if (equation.trim().isEmpty()) continue;
-
-                // ভেরিয়েবল বের করা (Hover এর জন্যও দরকার)
-                VBox sliderContainer = (VBox) mainRow.getChildren().get(1);
-                Map<String, Double> variables = new HashMap<>();
-                for(javafx.scene.Node sliderRow : sliderContainer.getChildren()) {
-                    if(sliderRow instanceof HBox) {
-                        HBox row = (HBox) sliderRow;
-                        Label lbl = (Label) row.getChildren().get(0);
-                        String varName = lbl.getText().replace(" = ", "");
-                        TextField valInput = (TextField) row.getChildren().get(2);
-                        try { variables.put(varName, Double.parseDouble(valInput.getText())); } catch (Exception ex) {}
-                    }
-                }
-
-                try {
-                    String cleanEq = cleanEquation(equation);
-                    ExpressionBuilder builder = new ExpressionBuilder(cleanEq).variable("x");
-                    for(String var : variables.keySet()) builder.variable(var);
-                    Expression expr = builder.build();
-                    for(Map.Entry<String, Double> entry : variables.entrySet()) expr.setVariable(entry.getKey(), entry.getValue());
-
-                    expr.setVariable("x", mathX);
-                    double mathY = expr.evaluate();
-                    double graphPixelY = centerY - (mathY * SCALE);
-
-                    if (Math.abs(mouseY - graphPixelY) < 15) {
-                        gc.setFill(Color.BLACK);
-                        gc.fillOval(mouseX - 5, graphPixelY - 5, 10, 10);
-                        String text = String.format("(%.2f, %.2f)", mathX, mathY);
-                        gc.setFill(Color.rgb(255, 255, 255, 0.8));
-                        gc.fillRoundRect(mouseX + 10, graphPixelY - 30, 120, 20, 10, 10);
-                        gc.setFill(Color.BLACK);
-                        gc.setFont(new Font("Arial", 12));
-                        gc.fillText(text, mouseX + 15, graphPixelY - 15);
-                    }
-                } catch (Exception ex) {}
-            }
-        }
-    }
-
-    // --- INPUT BOX & SLIDER LOGIC ---
-
-    private void addFunctionInputBox(VBox container) {
+    // --- 3. INPUT SYSTEM (Combined Logic) ---
+    private void addFunctionInputBox() {
         VBox mainRow = new VBox(5);
         mainRow.setStyle("-fx-background-color: transparent;");
 
-        // ১. কালার অ্যাসাইন করা (স্থায়ীভাবে)
+        // Color Assignment
         Color assignedColor = graphColors[globalColorIndex % graphColors.length];
         globalColorIndex++;
-
-        // কালারটা রোর (Row) মেমোরিতে সেভ করে রাখা
-        mainRow.setUserData(assignedColor);
+        mainRow.setUserData(assignedColor); // Store color in the row
 
         StackPane inputWrapper = new StackPane();
         inputWrapper.setAlignment(Pos.CENTER_RIGHT);
 
-        // ২. কালার ডট (Dot) তৈরি
-        javafx.scene.shape.Circle colorDot = new javafx.scene.shape.Circle(6, assignedColor); // Radius = 6
-        StackPane.setAlignment(colorDot, Pos.CENTER_LEFT); // বাম পাশে সেট করা
-        StackPane.setMargin(colorDot, new Insets(0, 0, 0, 15)); // বাম পাশ থেকে ১৫ পিক্সেল দূরে
+        // Color Dot
+        javafx.scene.shape.Circle colorDot = new javafx.scene.shape.Circle(6, assignedColor);
+        StackPane.setAlignment(colorDot, Pos.CENTER_LEFT);
+        StackPane.setMargin(colorDot, new Insets(0, 0, 0, 15));
 
         TextField inputBox = new TextField();
-        inputBox.setPromptText("Ex: ax + b");
+        inputBox.setPromptText("ex: y = sin(x) or x^2 + y^2 = 25");
         inputBox.setPrefHeight(50);
-        // বাম পাশে প্যাডিং বাড়ানো হলো (৩৫) যাতে ডটের নিচে লেখা না পড়ে
-        inputBox.setPadding(new Insets(5, 80, 5, 35));
-
+        inputBox.setPadding(new Insets(5, 80, 5, 35)); // Padding for dot and buttons
         inputBox.setStyle(
                 "-fx-background-color: White; -fx-background-radius: 10; " +
                         "-fx-border-color: #9D00FF; -fx-border-width: 2; -fx-border-radius: 10; " +
                         "-fx-text-fill: black; -fx-font-size: 15px; -fx-font-family: 'Verdana'; -fx-font-weight: bold;"
         );
 
-        // --- ICONS SETUP ---
+        // Icons
         HBox buttonBox = new HBox(8);
         buttonBox.setAlignment(Pos.CENTER);
-        buttonBox.setMaxWidth(70);
+        buttonBox.setMaxWidth(40);
         StackPane.setMargin(buttonBox, new Insets(0, 10, 0, 0));
 
-        Button settingsBtn = createIconButton(
-                "M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z",
-                "gray", 18
-        );
-
-        Button closeBtn = createIconButton(
-                "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
-                "gray", 18
-        );
+        Button closeBtn = createIconButton("M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z", "gray", 18);
 
         // Hover effects
-        closeBtn.setOnMouseEntered(e -> ((javafx.scene.shape.SVGPath)closeBtn.getGraphic()).setFill(Color.RED));
-        closeBtn.setOnMouseExited(e -> ((javafx.scene.shape.SVGPath)closeBtn.getGraphic()).setFill(Color.GRAY));
-        settingsBtn.setOnMouseEntered(e -> ((javafx.scene.shape.SVGPath)settingsBtn.getGraphic()).setFill(Color.web("#9D00FF")));
-        settingsBtn.setOnMouseExited(e -> ((javafx.scene.shape.SVGPath)settingsBtn.getGraphic()).setFill(Color.GRAY));
+        closeBtn.setOnMouseEntered(e -> ((SVGPath)closeBtn.getGraphic()).setFill(Color.RED));
+        closeBtn.setOnMouseExited(e -> ((SVGPath)closeBtn.getGraphic()).setFill(Color.GRAY));
 
-        buttonBox.getChildren().addAll(settingsBtn, closeBtn);
+        buttonBox.getChildren().add(closeBtn);
 
-        VBox sliderContainer = new VBox(10);
-        sliderContainer.setPadding(new Insets(0, 0, 0, 20));
-        sliderContainer.setVisible(false);
-        sliderContainer.setManaged(false);
+        // Container for Sliders and Prompts
+        VBox metaContainer = new VBox(5);
+        metaContainer.setPadding(new Insets(0, 0, 0, 20));
 
-        settingsBtn.setOnAction(e -> {
-            boolean isVisible = sliderContainer.isVisible();
-            sliderContainer.setVisible(!isVisible);
-            sliderContainer.setManaged(!isVisible);
-        });
+        HBox promptContainer = new HBox(10); // "Add slider for: a, b"
+        promptContainer.setAlignment(Pos.CENTER_LEFT);
 
+        VBox sliderContainer = new VBox(5); // Actual sliders
+
+        metaContainer.getChildren().addAll(promptContainer, sliderContainer);
+
+        // Delete Action
         Runnable deleteAction = () -> {
-            if (container.getChildren().size() > 1) {
-                container.getChildren().remove(mainRow);
-                drawGraph();
-            } else {
-                inputBox.clear();
-                sliderContainer.getChildren().clear();
-                drawGraph();
+            functionContainer.getChildren().remove(mainRow);
+            if (functionContainer.getChildren().isEmpty()) {
+                addFunctionInputBox(); // Keep at least one
             }
+            drawGraph();
         };
         closeBtn.setOnAction(e -> deleteAction.run());
 
+        // Text Change Logic (Analyze for variables)
         inputBox.textProperty().addListener((obs, oldVal, newVal) -> {
-            updateVariables(newVal, sliderContainer);
+            analyzeInputForVariables(newVal, promptContainer, sliderContainer);
             drawGraph();
         });
 
+        // Enter Key -> New Input
         inputBox.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
-                addFunctionInputBox(container);
-            }
-            if (event.getCode() == KeyCode.BACK_SPACE && inputBox.getText().isEmpty()) {
-                int index = container.getChildren().indexOf(mainRow);
-                if (index > 0) {
-                    VBox prevRow = (VBox) container.getChildren().get(index - 1);
-                    StackPane prevWrapper = (StackPane) prevRow.getChildren().get(0);
-                    prevWrapper.getChildren().get(0).requestFocus();
-                    deleteAction.run();
-                }
+                addFunctionInputBox();
             }
         });
 
-        // ৩. বক্সের স্ট্রাকচারে কালার ডট যোগ করা হলো
         inputWrapper.getChildren().addAll(inputBox, colorDot, buttonBox);
-        mainRow.getChildren().addAll(inputWrapper, sliderContainer);
-        container.getChildren().add(mainRow);
-        inputBox.requestFocus();
+        mainRow.getChildren().addAll(inputWrapper, metaContainer);
+        functionContainer.getChildren().add(mainRow);
+
+        // Focus if it's not the very first load
+        if (functionContainer.getChildren().size() > 1) {
+            inputBox.requestFocus();
+        }
     }
+
+    // --- 4. VARIABLE & SLIDER LOGIC (From first.java) ---
+
+    private void analyzeInputForVariables(String eq, HBox promptBox, VBox sliderBox) {
+        promptBox.getChildren().clear();
+
+        if (eq == null || eq.trim().isEmpty()) return;
+
+        // 1. Find potential variables
+        Set<String> foundVars = new HashSet<>();
+        Pattern p = Pattern.compile("[A-Za-z]+"); // Match words
+        Matcher m = p.matcher(eq);
+
+        // Reserved words that are NOT variables
+        Set<String> reserved = new HashSet<>(Arrays.asList(
+                "x", "y", "sin", "cos", "tan", "asin", "acos", "atan",
+                "sqrt", "cbrt", "log", "exp", "abs", "pi", "e"
+        ));
+
+        while (m.find()) {
+            String var = m.group();
+            if (!reserved.contains(var.toLowerCase())) {
+                foundVars.add(var);
+            }
+        }
+
+        // 2. Check which ones already have sliders IN THIS ROW or Globally?
+        // Logic: Variables are global in value, but we need to see if we need to show an "Add Slider" button.
+        // Simple approach: If variable is in 'foundVars' but not in 'variables' map, ask to create it.
+        // If it IS in 'variables' map, check if we need to show the slider UI in this row?
+        // Desmos style: Slider appears once. For simplicity here: Variables are global.
+        // We show "Add slider" if the variable exists in text but not in our global map yet.
+
+        for (String var : foundVars) {
+            if (!variables.containsKey(var)) {
+                Button addBtn = new Button("Add slider: " + var);
+                addBtn.setStyle("-fx-background-color: #333; -fx-text-fill: white; -fx-font-size: 10px; -fx-cursor: hand;");
+                addBtn.setOnAction(e -> {
+                    createSlider(var, sliderBox);
+                    promptBox.getChildren().remove(addBtn);
+                });
+                promptBox.getChildren().add(addBtn);
+            }
+        }
+    }
+
+    private void createSlider(String varName, VBox container) {
+        if (variables.containsKey(varName)) return; // Already exists
+
+        variables.put(varName, 1.0); // Default value
+
+        HBox row = new HBox(10);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setStyle("-fx-background-color: #222; -fx-background-radius: 5; -fx-padding: 5;");
+
+        Label nameLbl = new Label(varName);
+        nameLbl.setTextFill(Color.WHITE);
+        nameLbl.setFont(Font.font("Consolas", 14));
+
+        Slider slider = new Slider(-10, 10, 1);
+        slider.setPrefWidth(150);
+
+        TextField valInput = new TextField("1.00");
+        valInput.setPrefWidth(60);
+        valInput.setStyle("-fx-background-color: #333; -fx-text-fill: white; -fx-border-color: gray;");
+
+        // Listeners
+        slider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            variables.put(varName, newVal.doubleValue());
+            valInput.setText(String.format("%.2f", newVal));
+            drawGraph();
+        });
+
+        valInput.setOnAction(e -> {
+            try {
+                double val = Double.parseDouble(valInput.getText());
+                slider.setValue(val);
+                // Dynamic slider expansion
+                if(val > slider.getMax()) slider.setMax(val + 10);
+                if(val < slider.getMin()) slider.setMin(val - 10);
+            } catch (Exception ex) {}
+        });
+
+        row.getChildren().addAll(nameLbl, slider, valInput);
+        container.getChildren().add(row);
+        drawGraph();
+    }
+
+    // --- 5. GRAPHING ENGINE (From first.java) ---
+
+    private void handleZoom(ScrollEvent event) {
+        event.consume();
+        double zoomFactor = 1.1;
+        // Zoom towards mouse pointer logic could be added here,
+        // but sticking to center zoom from first.java for stability
+        if (event.getDeltaY() > 0) scale *= zoomFactor;
+        else scale /= zoomFactor;
+        drawGraph();
+    }
+
+    private void drawGraph() {
+        double width = canvas.getWidth();
+        double height = canvas.getHeight();
+
+        gc.clearRect(0, 0, width, height);
+
+        // Center of the screen
+        double centerX = width / 2.0 + offsetX;
+        double centerY = height / 2.0 + offsetY;
+
+        // A. Draw Smart Grid (from first.java)
+        drawSmartGrid(centerX, centerY, width, height);
+
+        // B. Draw Axes
+        drawAxes(centerX, centerY, width, height);
+
+        // C. Plot All Functions
+        for (javafx.scene.Node node : functionContainer.getChildren()) {
+            if (node instanceof VBox) {
+                VBox row = (VBox) node;
+                StackPane inputWrapper = (StackPane) row.getChildren().get(0);
+                TextField inputBox = (TextField) inputWrapper.getChildren().get(0);
+                Color color = (Color) row.getUserData();
+
+                String eq = inputBox.getText();
+                if (eq != null && !eq.trim().isEmpty()) {
+                    plotEquation(eq, color, centerX, centerY, width, height);
+                }
+            }
+        }
+    }
+
+    private void drawSmartGrid(double cx, double cy, double width, double height) {
+        // Desmos-style Grid Logic
+        Color majorColor = Color.web("#bfbfbf");
+        Color minorColor = Color.web("#e6e6e6");
+        Color textColor = Color.web("#666666");
+
+        gc.setFont(new Font("Arial", 12));
+
+        double targetGridPixelWidth = 100;
+        double minStep = (width / scale) * (targetGridPixelWidth / width);
+        double magnitude = Math.pow(10, Math.floor(Math.log10(minStep)));
+        double residual = minStep / magnitude;
+
+        double majorStep;
+        if (residual > 5) majorStep = 10 * magnitude;
+        else if (residual > 2) majorStep = 5 * magnitude;
+        else if (residual > 1) majorStep = 2 * magnitude;
+        else majorStep = magnitude;
+
+        int subdivisions = (Math.abs(majorStep / magnitude - 2) < 0.001) ? 4 : 5;
+        double minorStep = majorStep / subdivisions;
+
+        // Vertical Lines (X-axis)
+        double startX = Math.floor(-cx / scale / minorStep) * minorStep;
+        for (double i = startX; i * scale + cx < width; i += minorStep) {
+            double screenX = cx + (i * scale);
+            boolean isMajor = Math.abs(i / majorStep - Math.round(i / majorStep)) < 0.001;
+
+            gc.setStroke(isMajor ? majorColor : minorColor);
+            gc.setLineWidth(isMajor ? 1.0 : 0.5);
+            gc.strokeLine(screenX, 0, screenX, height);
+
+            if (isMajor && Math.abs(i) > 0.0001) {
+                gc.setFill(textColor);
+                String label = (Math.abs(i - Math.round(i)) < 0.001) ?
+                        String.format("%d", (long)Math.round(i)) : String.format("%.1f", i);
+                gc.fillText(label, screenX - 5, cy + 20);
+            }
+        }
+
+        // Horizontal Lines (Y-axis)
+        double startY = Math.floor((cy - height) / scale / minorStep) * minorStep;
+        double endY = Math.ceil(cy / scale / minorStep) * minorStep;
+
+        for (double i = startY; i <= endY; i += minorStep) {
+            double screenY = cy - (i * scale);
+            boolean isMajor = Math.abs(i / majorStep - Math.round(i / majorStep)) < 0.001;
+
+            gc.setStroke(isMajor ? majorColor : minorColor);
+            gc.setLineWidth(isMajor ? 1.0 : 0.5);
+            gc.strokeLine(0, screenY, width, screenY);
+
+            if (isMajor && Math.abs(i) > 0.0001) {
+                gc.setFill(textColor);
+                String label = (Math.abs(i - Math.round(i)) < 0.001) ?
+                        String.format("%d", (long)Math.round(i)) : String.format("%.1f", i);
+                gc.fillText(label, cx + 5, screenY + 5);
+            }
+        }
+    }
+
+    private void drawAxes(double cx, double cy, double width, double height) {
+        gc.setStroke(Color.BLACK);
+        gc.setLineWidth(1.5);
+        gc.strokeLine(0, cy, width, cy);
+        gc.strokeLine(cx, 0, cx, height);
+    }
+
+    private void plotEquation(String rawEq, Color color, double cx, double cy, double width, double height) {
+        gc.setStroke(color);
+        gc.setLineWidth(2.5);
+
+        // Pre-processing
+        String eq = rawEq.toLowerCase().replace(" ", "");
+        // Implicit Multiplication (2x -> 2*x, ax -> a*x)
+        eq = eq.replaceAll("(\\d)([a-z])", "$1*$2");
+        // Variable-Variable mult (ax -> a*x) - Simple heuristics
+        // This is tricky without a full parser, but let's try a safe subset
+        // Avoid replacing 'sin', 'cos' etc.
+        // For this demo, we rely on user typing * mostly, or simple 2x.
+
+        try {
+            if (eq.contains("=") && !eq.startsWith("y=") && !eq.startsWith("x=")) {
+                // Implicit Plotting (Marching Squares)
+                plotImplicit(eq, cx, cy, width, height);
+            } else {
+                // Explicit Plotting
+                if (eq.startsWith("y=")) eq = eq.substring(2);
+
+                // Build Expression
+                ExpressionBuilder builder = new ExpressionBuilder(eq).variable("x");
+                for (String var : variables.keySet()) builder.variable(var);
+                Expression expr = builder.build();
+                for (Map.Entry<String, Double> entry : variables.entrySet()) expr.setVariable(entry.getKey(), entry.getValue());
+
+                gc.beginPath();
+                boolean first = true;
+
+                // Plot pixel by pixel (Optimization: step size could be higher)
+                for (double screenX = 0; screenX <= width; screenX++) {
+                    double mathX = (screenX - cx) / scale;
+                    try {
+                        expr.setVariable("x", mathX);
+                        double mathY = expr.evaluate();
+
+                        if (Double.isNaN(mathY) || Double.isInfinite(mathY)) {
+                            first = true; continue;
+                        }
+
+                        double screenY = cy - (mathY * scale);
+
+                        // Clipping check to avoid drawing lines across infinity
+                        if (screenY < -height || screenY > height * 2) {
+                            first = true; continue;
+                        }
+
+                        if (first) { gc.moveTo(screenX, screenY); first = false; }
+                        else { gc.lineTo(screenX, screenY); }
+                    } catch (Exception ex) { first = true; }
+                }
+                gc.stroke();
+            }
+        } catch (Exception e) {
+            // SIlent fail on invalid equations
+        }
+    }
+
+    // Implicit Plotting (Marching Squares from first.java)
+    private void plotImplicit(String eq, double cx, double cy, double width, double height) {
+        String[] parts = eq.split("=");
+        if(parts.length != 2) return;
+
+        String expressionStr = parts[0] + "-(" + parts[1] + ")";
+
+        ExpressionBuilder builder = new ExpressionBuilder(expressionStr).variables("x", "y");
+        for (String var : variables.keySet()) builder.variable(var);
+        Expression expr = builder.build();
+        for (Map.Entry<String, Double> entry : variables.entrySet()) expr.setVariable(entry.getKey(), entry.getValue());
+
+        int resolution = 5; // Resolution for marching squares (lower = nicer but slower)
+
+        for (double x = 0; x < width; x += resolution) {
+            for (double y = 0; y < height; y += resolution) {
+                // Evaluate corners
+                double vBL = evaluate(expr, x, y + resolution, cx, cy);
+                double vBR = evaluate(expr, x + resolution, y + resolution, cx, cy);
+                double vTR = evaluate(expr, x + resolution, y, cx, cy);
+                double vTL = evaluate(expr, x, y, cx, cy);
+
+                // Marching Squares Logic
+                // If signs differ, there is a line crossing
+
+                // Simple version: interpolate linearly
+                // Check edges
+                if (isSignDifferent(vBL, vTL)) {
+                    // Left edge
+                    double t = -vBL / (vTL - vBL);
+                    double ly = (y + resolution) - t * resolution;
+                    // We need a partner point. Simplified: Draw points or short segments
+                    // For full connected lines, we need the lookup table.
+                    // first.java used a simplified line drawer:
+
+                    // Let's copy the logic from first.java strictly
+                    // ... logic copied below ...
+                }
+
+                // Re-implementing the exact block from first.java for reliability
+                double[][][] hits = new double[4][2][];
+                int hitCount = 0;
+
+                if (isSignDifferent(vBL, vTL)) {
+                    double t = -vBL / (vTL - vBL);
+                    hits[hitCount++] = new double[][]{{x, y + resolution - (t * resolution)}};
+                }
+                if (isSignDifferent(vBL, vBR)) {
+                    double t = -vBL / (vBR - vBL);
+                    hits[hitCount++] = new double[][]{{x + (t * resolution), y + resolution}};
+                }
+                if (isSignDifferent(vBR, vTR)) {
+                    double t = -vBR / (vTR - vBR);
+                    hits[hitCount++] = new double[][]{{x + resolution, y + resolution - (t * resolution)}};
+                }
+                if (isSignDifferent(vTR, vTL)) {
+                    double t = -vTR / (vTL - vTR);
+                    hits[hitCount++] = new double[][]{{x + resolution - (t * resolution), y}};
+                }
+
+                if (hitCount == 2) {
+                    gc.strokeLine(hits[0][0][0], hits[0][0][1], hits[1][0][0], hits[1][0][1]);
+                }
+                else if (hitCount == 4) {
+                    gc.strokeLine(hits[0][0][0], hits[0][0][1], hits[1][0][0], hits[1][0][1]);
+                    gc.strokeLine(hits[2][0][0], hits[2][0][1], hits[3][0][0], hits[3][0][1]);
+                }
+            }
+        }
+    }
+
+    private double evaluate(Expression expr, double screenX, double screenY, double cx, double cy) {
+        double mathX = (screenX - cx) / scale;
+        double mathY = (cy - screenY) / scale;
+        expr.setVariable("x", mathX);
+        expr.setVariable("y", mathY);
+        try { return expr.evaluate(); } catch (Exception e) { return Double.NaN; }
+    }
+
+    private boolean isSignDifferent(double v1, double v2) {
+        if (Double.isNaN(v1) || Double.isNaN(v2)) return false;
+        return (v1 > 0 && v2 < 0) || (v1 < 0 && v2 > 0) || v1 == 0 || v2 == 0;
+    }
+
+    // --- UTILS ---
     private Button createIconButton(String svgData, String colorHex, double size) {
-        javafx.scene.shape.SVGPath path = new javafx.scene.shape.SVGPath();
+        SVGPath path = new SVGPath();
         path.setContent(svgData);
         path.setFill(Color.web(colorHex));
 
-        // Scale the icon
+        // Normalize size
         double originalWidth = path.getBoundsInLocal().getWidth();
         double scaleFactor = size / originalWidth;
         path.setScaleX(scaleFactor);
@@ -455,137 +619,7 @@ public class MainApp extends Application {
         return btn;
     }
 
-    private void updateVariables(String equation, VBox sliderContainer) {
-        Set<String> foundVars = new HashSet<>();
-
-        // ১. টেম্পোরারি স্ট্রিং থেকে ম্যাথ ফাংশনগুলো রিমুভ করে ফেলি
-        // যাতে 'sin' এর s, i, n কে ভেরিয়েবল না ভাবে
-        String tempEq = equation.toLowerCase();
-        String[] functions = {"sin", "cos", "tan", "asin", "acos", "atan", "sqrt", "cbrt", "log", "exp", "abs"};
-
-        for (String func : functions) {
-            tempEq = tempEq.replace(func, " "); // ফাংশনের নামগুলো স্পেস দিয়ে রিপ্লেস
-        }
-
-        // ২. বাকি স্ট্রিং থেকে প্রতিটি অক্ষর চেক করি
-        for (char c : tempEq.toCharArray()) {
-            // যদি অক্ষর হয় এবং x, e, pi বা স্পেস না হয়
-            if (Character.isLetter(c) && c != 'x' && c != 'e' && c != ' ') {
-                // pi আলাদাভাবে হ্যান্ডেল করা কঠিন ক্যারেক্টার লুপে, তাই আমরা p এবং i কেও ইগনোর করতে পারি যদি দরকার হয়
-                // আপাতত সিম্পল রাখছি:
-                if (c != 'p' && c != 'i') { // pi এর কনফিউশন এড়াতে
-                    foundVars.add(String.valueOf(c));
-                }
-            }
-        }
-
-        // ৩. স্লাইডার তৈরি (আগের মতোই)
-        List<javafx.scene.Node> currentNodes = new ArrayList<>(sliderContainer.getChildren());
-        sliderContainer.getChildren().clear();
-
-        for (String varName : foundVars) {
-            HBox existingRow = null;
-            for(javafx.scene.Node node : currentNodes) {
-                if(node instanceof HBox) {
-                    Label lbl = (Label) ((HBox) node).getChildren().get(0);
-                    if(lbl.getText().startsWith(varName)) {
-                        existingRow = (HBox) node; break;
-                    }
-                }
-            }
-            if(existingRow != null) sliderContainer.getChildren().add(existingRow);
-            else sliderContainer.getChildren().add(createSliderRow(varName));
-        }
-    }
-    // ভেরিয়েবল চেক করার জন্য হেল্পার মেথড
-    private boolean isReserved(String str) {
-        // এই শব্দগুলো ভেরিয়েবল হিসেবে গণ্য হবে না
-        return str.equals("x") || str.equals("pi") || str.equals("e") ||
-                str.equals("sin") || str.equals("cos") || str.equals("tan") ||
-                str.equals("asin") || str.equals("acos") || str.equals("atan") ||
-                str.equals("sqrt") || str.equals("cbrt") || str.equals("log") ||
-                str.equals("log10") || str.equals("log2") || str.equals("abs") ||
-                str.equals("ceil") || str.equals("floor") || str.equals("exp") ||
-                str.equals("signum");
-    }
-
-    private HBox createSliderRow(String varName) {
-        HBox row = new HBox(10);
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.setStyle("-fx-background-color: #222; -fx-background-radius: 5; -fx-padding: 5;");
-
-        Label nameLbl = new Label(varName + " = ");
-        nameLbl.setTextFill(Color.WHITE);
-        nameLbl.setFont(Font.font("Consolas", 14));
-
-        Slider slider = new Slider(-10, 10, 1);
-        slider.setPrefWidth(150);
-
-        TextField valInput = new TextField("1");
-        valInput.setPrefWidth(60);
-        valInput.setStyle("-fx-background-color: #333; -fx-text-fill: white;");
-
-        slider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            valInput.setText(String.format("%.2f", newVal));
-            drawGraph();
-        });
-
-        valInput.setOnAction(e -> {
-            try {
-                double val = Double.parseDouble(valInput.getText());
-                slider.setValue(val);
-                if(val > slider.getMax()) slider.setMax(val + 50);
-                if(val < slider.getMin()) slider.setMin(val - 50);
-                drawGraph();
-            } catch (NumberFormatException ex) {}
-        });
-
-        row.getChildren().addAll(nameLbl, slider, valInput);
-        return row;
-    }
-
-    private String cleanEquation(String equation) {
-        String cleanEq = equation.toLowerCase().replace(" ", "");
-        if (cleanEq.startsWith("y=")) cleanEq = cleanEq.substring(2);
-
-        // ১. ইমপ্লিসিট মাল্টিপ্লিকেশন হ্যান্ডেল করা (2x -> 2*x)
-        cleanEq = cleanEq.replaceAll("(\\d)([a-z])", "$1*$2");
-
-        // ২. দুটি ভেরিয়েবল পাশাপাশি থাকলে মাঝখানে * বসানো (ax -> a*x)
-        // তবে সাবধান! sin যেন s*i*n না হয়ে যায়।
-        // এই পার্টটা খুব জটিল Regex ছাড়া করা কঠিন।
-        // তাই সবচেয়ে ভালো উপায় হলো ইউজারকে হিন্ট দেওয়া যে 'a*x' লিখতে হবে।
-        // তবে আমরা সাধারণ 'ax' বা 'bx' হ্যান্ডেল করতে পারি এভাবে:
-
-        // সাধারণ ফরম্যাট (single letter variable followed by x)
-        // যেমন: ax, bx, mx -> a*x, b*x
-        cleanEq = cleanEq.replaceAll("([a-wz])(x)", "$1*$2");
-        // [a-wz] মানে x বাদে অন্য অক্ষর। y তো এমনিতেই নেই।
-
-        return cleanEq;
-    }
-
-    private void drawGrid(double width, double height) {
-        gc.setStroke(Color.LIGHTGRAY);
-        gc.setLineWidth(0.5);
-        double centerX = width / 2.0;
-        double centerY = height / 2.0;
-        for (double i = centerX; i < width; i += SCALE) gc.strokeLine(i, 0, i, height);
-        for (double i = centerX; i > 0; i -= SCALE) gc.strokeLine(i, 0, i, height);
-        for (double i = centerY; i < height; i += SCALE) gc.strokeLine(0, i, width, i);
-        for (double i = centerY; i > 0; i -= SCALE) gc.strokeLine(0, i, width, i);
-    }
-
-    private void drawAxes(double width, double height) {
-        gc.setStroke(Color.BLACK);
-        gc.setLineWidth(1.5);
-        gc.strokeLine(0, height / 2.0, width, height / 2.0);
-        gc.strokeLine(width / 2.0, 0, width / 2.0, height);
-    }
-
-
-
     public static void main(String[] args) {
-        launch();
+        launch(args);
     }
 }
