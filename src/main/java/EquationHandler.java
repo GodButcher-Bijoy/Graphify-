@@ -1,6 +1,3 @@
-package org.example;
-
-
 import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
 
@@ -23,8 +20,8 @@ public class EquationHandler {
     // ইকুয়েশন থেকে স্লাইডারের জন্য ভেরিয়েবল (a, b, c ইত্যাদি) বের করার লজিক
     public static Set<String> extractVariables(String eq) {
         Set<String> foundVars = new HashSet<>();
-        Pattern p = Pattern.compile("[A-z]");
-        Matcher m = p.matcher(eq);
+        Pattern p = Pattern.compile("[a-zA-Z]");
+        Matcher m = p.matcher(eq.toLowerCase());
 
         while (m.find()) {
             String var = m.group();
