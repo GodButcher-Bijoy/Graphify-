@@ -1,4 +1,3 @@
-
 package org.example;
 
 import javafx.application.Application;
@@ -9,11 +8,8 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
-import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
-import javafx.scene.layout.StackPane;
-import javafx.geometry.Pos;
 
 
 public class MainApp1 extends Application {

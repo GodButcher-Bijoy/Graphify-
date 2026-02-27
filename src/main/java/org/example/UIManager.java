@@ -163,7 +163,6 @@ public class UIManager {
         inputBox.setOnKeyPressed(event -> {
             var rows = functionContainer.getChildren();
             int currentIndex = rows.indexOf(mainRow); // সরাসরি mainRow (VBox) এর ইনডেক্স বের করছি
-
             if (event.getCode() == KeyCode.UP) {
                 if (currentIndex > 0) {
                     focusTextFieldInRow(rows.get(currentIndex - 1));
@@ -189,7 +188,16 @@ public class UIManager {
                 }
             }
         });
-
+        inputBox.focusedProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal) {
+                int currentIndex = functionContainer.getChildren().indexOf(mainRow);
+                appState.setFocusedEquationIndex(currentIndex);
+            } else {
+                appState.setFocusedEquationIndex(-1);
+                appState.getTemporaryPoints().clear();
+            }
+            redrawCallback.run();
+        });
         HBox promptBox = new HBox(8);
         promptBox.setAlignment(Pos.CENTER_LEFT);
         promptBox.setPadding(new Insets(0, 10, 10, 35));

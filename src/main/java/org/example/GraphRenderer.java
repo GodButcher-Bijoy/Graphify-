@@ -9,7 +9,10 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import net.objecthunter.exp4j.Expression;
-
+import javafx.geometry.Point2D;
+import net.objecthunter.exp4j.ExpressionBuilder;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class GraphRenderer {
@@ -57,8 +60,298 @@ public class GraphRenderer {
         this.canvas.setOnMouseReleased(e -> {
             canvas.setCursor(javafx.scene.Cursor.DEFAULT);
         });
+        this.canvas.setOnMouseClicked(e -> {
+            double cx = canvas.getWidth() / 2.0 + appState.getOffsetX();
+            double cy = canvas.getHeight() / 2.0 + appState.getOffsetY();
+            double scale = appState.getScale();
+
+            // 1. Prothome check korbo Pinned Points er upore click poreche kina (Unpin korar jonno)
+            // (ConcurrentModificationException erate new ArrayList bebohar kora holo)
+            for (Point2D pinnedPoint : new java.util.ArrayList<>(appState.getPinnedPoints())) {
+                double screenX = cx + pinnedPoint.getX() * scale;
+                double screenY = cy - pinnedPoint.getY() * scale;
+
+                // jodi click ta pinned point er 10 pixel er vitor hoy
+                if (Math.hypot(screenX - e.getX(), screenY - e.getY()) < 10) {
+                    appState.togglePinnedPoint(pinnedPoint);
+                    drawGraph();
+                    return; // Kaj shesh, tai return
+                }
+            }
+
+            // 2. Erpor check korbo Temporary Points er upore click poreche kina (Pin korar jonno)
+            for (Point2D tempPoint : appState.getTemporaryPoints()) {
+                double screenX = cx + tempPoint.getX() * scale;
+                double screenY = cy - tempPoint.getY() * scale;
+
+                // jodi click ta temporary point er 10 pixel er vitor hoy
+                if (Math.hypot(screenX - e.getX(), screenY - e.getY()) < 10) {
+                    appState.togglePinnedPoint(tempPoint);
+                    drawGraph();
+                    return;
+                }
+            }
+        });
     }
 
+    // --- ADVANCED 2D QUAD-TREE BISECTION ALGORITHM ---
+
+    private class EqWrapper {
+        int type; // 0: y=f(x), 1: x=f(y), 2: implicit, 3: X-Axis, 4: Y-Axis
+        Expression expr;
+
+        // শুধু অ্যাক্সিস (Axes) এর জন্য স্পেশাল কনস্ট্রাক্টর
+        EqWrapper(int axisType) {
+            this.type = axisType;
+        }
+
+        EqWrapper(String eqStr, Map<String, Double> globals) {
+            String eq = EquationHandler.formatEquation(eqStr);
+            if (eq.startsWith("y=") && !eq.contains("x=")) {
+                type = 0;
+                expr = EquationHandler.buildExpression(eq.substring(2), "x", globals);
+            } else if (eq.startsWith("x=") && !eq.contains("y=")) {
+                type = 1;
+                expr = EquationHandler.buildExpression(eq.substring(2), "y", globals);
+            } else if (eq.contains("=")) {
+                type = 2;
+                String[] parts = eq.split("=");
+                String expressionStr = (parts.length == 2) ? parts[0] + "-(" + parts[1] + ")" : eq;
+                expr = EquationHandler.buildImplicitExpression(expressionStr, globals);
+            } else {
+                type = 0;
+                expr = EquationHandler.buildExpression(eq, "x", globals);
+            }
+        }
+
+        // F(x, y) = 0 রিটার্ন করে। এটি যেকোনো ইকুয়েশনের দূরত্ব মাপতে ব্যবহার হয়
+        double evaluateDifference(double x, double y) {
+            if (type == 3) return y; // X-অক্ষ মানে y = 0
+            if (type == 4) return x; // Y-অক্ষ মানে x = 0
+            try {
+                if (type == 0) {
+                    expr.setVariable("x", x);
+                    return y - expr.evaluate();
+                } else if (type == 1) {
+                    expr.setVariable("y", y);
+                    return x - expr.evaluate();
+                } else {
+                    expr.setVariable("x", x);
+                    expr.setVariable("y", y);
+                    return expr.evaluate();
+                }
+            } catch (Exception e) { return Double.NaN; }
+        }
+    }
+
+    private void addTempPoint(double x, double y) {
+        if (Double.isNaN(x) || Double.isNaN(y) || Double.isInfinite(x) || Double.isInfinite(y)) return;
+        Point2D p = new Point2D(x, y);
+        // ১০ পিক্সেলের ভেতরে কোনো ডুপ্লিকেট পয়েন্ট থাকলে ইগনোর করবে
+        double pixelThreshold = 10.0 / appState.getScale();
+        for (Point2D existing : appState.getTemporaryPoints()) {
+            if (existing.distance(p) < pixelThreshold) return;
+        }
+        appState.getTemporaryPoints().add(p);
+    }
+
+    // --- UPDATED: চেক করে গ্রাফটি এই বক্সের কোনো একপাশ দিয়ে পাস করেছে কি না ---
+    private boolean crossesBox(EqWrapper eq, double xMin, double xMax, double yMin, double yMax) {
+        if (eq == null) return false;
+
+        double midX = (xMin + xMax) / 2.0;
+        double midY = (yMin + yMax) / 2.0;
+
+        // ৪টি কোণা এবং সেন্টারের ভ্যালু
+        double vBL = eq.evaluateDifference(xMin, yMin);
+        double vBR = eq.evaluateDifference(xMax, yMin);
+        double vTL = eq.evaluateDifference(xMin, yMax);
+        double vTR = eq.evaluateDifference(xMax, yMax);
+        double vC  = eq.evaluateDifference(midX, midY);
+
+        // [NEW] আরও নিখুঁতভাবে স্পর্শক (Tangent) ধরার জন্য ৪টি এজ (Edge) মিডপয়েন্ট যোগ করা হলো
+        double vT = eq.evaluateDifference(midX, yMax);
+        double vB = eq.evaluateDifference(midX, yMin);
+        double vL = eq.evaluateDifference(xMin, midY);
+        double vR = eq.evaluateDifference(xMax, midY);
+
+        boolean hasPos = vBL > 0 || vBR > 0 || vTL > 0 || vTR > 0 || vC > 0 || vT > 0 || vB > 0 || vL > 0 || vR > 0;
+        boolean hasNeg = vBL < 0 || vBR < 0 || vTL < 0 || vTR < 0 || vC < 0 || vT < 0 || vB < 0 || vL < 0 || vR < 0;
+
+        // [NEW] ফ্লোটিং পয়েন্ট এরর কাটানোর জন্য খুব ছোট মানকেও ০ (Touch) ধরা হলো
+        double epsilon = 1e-7;
+        if (Math.abs(vBL) < epsilon || Math.abs(vBR) < epsilon || Math.abs(vTL) < epsilon || Math.abs(vTR) < epsilon ||
+                Math.abs(vC) < epsilon || Math.abs(vT) < epsilon || Math.abs(vB) < epsilon || Math.abs(vL) < epsilon || Math.abs(vR) < epsilon) {
+            return true;
+        }
+
+        return hasPos && hasNeg;
+    }
+
+    // --- UPDATED: রিকার্সিভলি বক্সটিকে ছোট করে এক্সাক্ট পয়েন্ট বের করে ---
+    private void refineBox(EqWrapper eq1, EqWrapper eq2, double x1, double x2, double y1, double y2, int depth) {
+        if (depth > 12) {
+            double midX = (x1 + x2) / 2.0;
+            double midY = (y1 + y2) / 2.0;
+
+            double val1 = eq1.evaluateDifference(midX, midY);
+            double val2 = eq2.evaluateDifference(midX, midY);
+
+            // [FIX] Asymptote ফিল্টারের মান ১.০ থেকে বাড়িয়ে ১০০০.০ করা হলো,
+            // যাতে স্কেলড কোণিক ইকুয়েশনের ভ্যালিড ট্যানজেন্টগুলো মিস না হয়
+            if (Math.abs(val1) < 1000.0 && Math.abs(val2) < 1000.0) {
+                addTempPoint(midX, midY);
+            }
+            return;
+        }
+
+        double midX = (x1 + x2) / 2.0;
+        double midY = (y1 + y2) / 2.0;
+
+        if (crossesBox(eq1, x1, midX, y1, midY) && crossesBox(eq2, x1, midX, y1, midY))
+            refineBox(eq1, eq2, x1, midX, y1, midY, depth + 1);
+
+        if (crossesBox(eq1, midX, x2, y1, midY) && crossesBox(eq2, midX, x2, y1, midY))
+            refineBox(eq1, eq2, midX, x2, y1, midY, depth + 1);
+
+        if (crossesBox(eq1, x1, midX, midY, y2) && crossesBox(eq2, x1, midX, midY, y2))
+            refineBox(eq1, eq2, x1, midX, midY, y2, depth + 1);
+
+        if (crossesBox(eq1, midX, x2, midY, y2) && crossesBox(eq2, midX, x2, midY, y2))
+            refineBox(eq1, eq2, midX, x2, midY, y2, depth + 1);
+    }
+
+    private void calculateTemporaryPoints(double width, double height, double cx, double cy) {
+        appState.getTemporaryPoints().clear();
+        int focusedIdx = appState.getFocusedEquationIndex();
+        if (focusedIdx == -1) return;
+
+        List<EqWrapper> otherExprs = new ArrayList<>();
+        EqWrapper focusedEq = null;
+
+        int index = 0;
+        for (javafx.scene.Node node : functionContainer.getChildren()) {
+            if (node instanceof VBox) {
+                VBox mainRow = (VBox) node;
+                StackPane inputWrapper = (StackPane) mainRow.getChildren().get(0);
+                VBox fieldAndPrompt = (VBox) inputWrapper.getChildren().get(0);
+                TextField inputBox = (TextField) fieldAndPrompt.getChildren().get(0);
+
+                String eq = inputBox.getText();
+                if (!eq.trim().isEmpty() && !(eq.startsWith("(") && eq.endsWith(")"))) {
+                    try {
+                        EqWrapper wrapper = new EqWrapper(eq, appState.getGlobalVariables());
+                        if (index == focusedIdx) focusedEq = wrapper;
+                        else otherExprs.add(wrapper);
+                    } catch (Exception ignored) {}
+                }
+            }
+            index++;
+        }
+
+        if (focusedEq == null) return;
+
+        // X-Axis ও Y-Axis কে ইকুয়েশন হিসেবে যোগ করা হলো
+        otherExprs.add(new EqWrapper(3));
+        otherExprs.add(new EqWrapper(4));
+
+        double scale = appState.getScale();
+        double startX = -cx / scale;
+        double endX = (width - cx) / scale;
+        double startY = (cy - height) / scale;
+        double endY = cy / scale;
+
+        // প্রাথমিকভাবে ১০ পিক্সেল অন্তর অন্তর স্ক্যানিং
+        double step = 10.0 / scale;
+
+        for (double x = startX; x < endX; x += step) {
+            for (double y = startY; y < endY; y += step) {
+                // শুধু যদি মেইন ইকুয়েশনটি এই বক্সে থাকে, তবেই বাকিগুলোর সাথে মেলাবে
+                if (crossesBox(focusedEq, x, x + step, y, y + step)) {
+                    for (EqWrapper other : otherExprs) {
+                        if (crossesBox(other, x, x + step, y, y + step)) {
+                            // একদম নিখুঁত পয়েন্ট বের করার জন্য রিফাইন কল করা হলো
+                            refineBox(focusedEq, other, x, x + step, y, y + step, 0);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // --- পিন করা পয়েন্টগুলো এখনও ভ্যালিড কি না তা চেক করার মেথড ---
+    private void validatePinnedPoints() {
+        if (appState.getPinnedPoints().isEmpty()) return;
+
+        List<EqWrapper> allExprs = new ArrayList<>();
+
+        // বর্তমানে স্ক্রিনে থাকা সব অ্যাকটিভ ইকুয়েশনগুলো কালেক্ট করা
+        for (javafx.scene.Node node : functionContainer.getChildren()) {
+            if (node instanceof VBox) {
+                VBox mainRow = (VBox) node;
+                StackPane inputWrapper = (StackPane) mainRow.getChildren().get(0);
+                VBox fieldAndPrompt = (VBox) inputWrapper.getChildren().get(0);
+                TextField inputBox = (TextField) fieldAndPrompt.getChildren().get(0);
+
+                String eq = inputBox.getText();
+                if (!eq.trim().isEmpty() && !(eq.startsWith("(") && eq.endsWith(")"))) {
+                    try {
+                        allExprs.add(new EqWrapper(eq, appState.getGlobalVariables()));
+                    } catch (Exception ignored) {}
+                }
+            }
+        }
+
+        // X-অক্ষ এবং Y-অক্ষকেও লিস্টে যোগ করে দেওয়া
+        allExprs.add(new EqWrapper(3));
+        allExprs.add(new EqWrapper(4));
+
+        // ৫ পিক্সেলের একটি টলারেন্স জোন (ম্যাথমেটিক্যাল স্কেলে কনভার্ট করা)
+        double threshold = 5.0 / appState.getScale();
+
+        // যে পয়েন্টগুলো এখন আর অন্তত ২টি গ্রাফ/অক্ষকে টাচ করে না, সেগুলো ডিলিট করে দেবে
+        appState.getPinnedPoints().removeIf(p -> {
+            int crossingCount = 0;
+            for (EqWrapper eq : allExprs) {
+                if (crossesBox(eq, p.getX() - threshold, p.getX() + threshold, p.getY() - threshold, p.getY() + threshold)) {
+                    crossingCount++;
+                }
+            }
+            return crossingCount < 2; // ২ এর কম হলে true রিটার্ন করবে এবং পয়েন্টটি রিমুভ হয়ে যাবে
+        });
+    }
+    private void drawPoints(double cx, double cy) {
+        double scale = appState.getScale();
+
+        // Draw Temporary Points (Gray)
+        gc.setFill(Color.web("#888888", 0.7));
+        for (Point2D p : appState.getTemporaryPoints()) {
+            double screenX = cx + p.getX() * scale;
+            double screenY = cy - p.getY() * scale;
+            gc.fillOval(screenX - 4, screenY - 4, 8, 8);
+            gc.setStroke(Color.WHITE);
+            gc.setLineWidth(1);
+            gc.strokeOval(screenX - 4, screenY - 4, 8, 8);
+        }
+
+        // Draw Pinned Points (Blue) & Coordinates
+        gc.setFont(Font.font("Arial", 12));
+        for (Point2D p : appState.getPinnedPoints()) {
+            double screenX = cx + p.getX() * scale;
+            double screenY = cy - p.getY() * scale;
+
+            gc.setFill(Color.web("#007AFF")); // Desmos Blue
+            gc.fillOval(screenX - 5, screenY - 5, 10, 10);
+            gc.setStroke(Color.WHITE);
+            gc.strokeOval(screenX - 5, screenY - 5, 10, 10);
+
+            // Text Label
+            String label = String.format("(%.2f, %.2f)", p.getX(), p.getY());
+            gc.setFill(Color.web("#222222", 0.8));
+            gc.fillRoundRect(screenX + 12, screenY - 20, 80, 22, 5, 5);
+            gc.setFill(Color.WHITE);
+            gc.fillText(label, screenX + 15, screenY - 4);
+        }
+    }
     public void drawGraph() {
         if (canvas == null || gc == null) return;
         double width = canvas.getWidth();
@@ -116,9 +409,11 @@ public class GraphRenderer {
                 }
             }
         }
-
         // ৩. একদম শেষে নাম্বারগুলো আঁকবো (যাতে নাম্বার সবসময় গ্রাফ লাইনের উপরে থাকে)
         drawGridLabels(width, height);
+        calculateTemporaryPoints(width, height, centerX, centerY);
+        validatePinnedPoints();
+        drawPoints(centerX, centerY);
     }
 
     // --- Grid Lines Only ---
