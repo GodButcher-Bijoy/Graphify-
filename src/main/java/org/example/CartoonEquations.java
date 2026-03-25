@@ -17,19 +17,31 @@ public class CartoonEquations extends EquationCategory {
             Color.web("#FF3B30"), Color.web("#5AC8FA"),
     };
 
-    @Override public String getCategoryName() { return "Super-Heroes"; }
+    @Override public String getCategoryName() { return "Cartoon"; }
     @Override public String getCategoryEmoji() { return "🎭"; }
     @Override public Color[] getColors()       { return PALETTE; }
 
     @Override
     public List<EquationPreset> getPresets() {
         return Arrays.asList(
+                heart(),
                 batman(),
                 captain_america_shield(),
-                pikachu()
+                ironManMask(),
+                pikachu(),
+                pacman()
         );
     }
 
+    // -----------------------------------------------------------------------
+    // Heart Curve
+    // -----------------------------------------------------------------------
+    private EquationPreset heart() {
+        return new EquationPreset(
+                "Heart ❤", "Classic mathematical heart curve", 60.0,
+                EquationEntry.of("x^2+(y-cbrt(x^2))^2=1", "#FF2D55")   // vivid red
+        );
+    }
 
     // -----------------------------------------------------------------------
     // Batman Symbol
@@ -67,28 +79,60 @@ public class CartoonEquations extends EquationCategory {
     }
 
     // -----------------------------------------------------------------------
+    // Iron Man Mask
+    // -----------------------------------------------------------------------
+    private EquationPreset ironManMask() {
+        return new EquationPreset(
+                "Iron Man Mask 🤖", "Iron Man faceplate outline", 45.0,
+                EquationEntry.of("y = -x^2/9 + 6 {-3 <= x <= 3}",                "#CC0000"), // outer head (red)
+                EquationEntry.of("y = -4abs(x) + 17 {3 < abs(x) <= 4}",    "#FFD700"), // right eye (gold)
+                EquationEntry.of("y = 2.5abs(x) - 9 {2 < abs(x) <= 4}",  "#CC0000"), // left eye (gold)
+                EquationEntry.of("y = -4 {-2 <= x <= 2}",                "#CC0000"), // nose bridge
+                EquationEntry.of("y = -0.3abs(x) + 3.5 {1 <= abs(x) <= 3}",              "#FFD700"), // right cheek line
+                EquationEntry.of("y = -0.3abs(x) + 2.5 {1 <= abs(x) <= 3}",              "#FFD700"), // left cheek line
+                EquationEntry.of("x = 1 {2.2 <= y <= 3.2}",                 "#FFD700"), // chin horizontal
+                EquationEntry.of("x = -1 {2.2 <= y <= 3.2}",                 "#FFD700"), // right jaw angle
+                EquationEntry.of("x = 3 {1.6 <= y <= 2.6}",              "#FFD700"),  // left jaw angle
+                EquationEntry.of("x = -3 {1.6 <= y <= 2.6}",              "#FFD700"),  // left jaw angle
+                EquationEntry.of("y = -2 {-1.5 <= x <= 1.5}",              "#FFD700")  // left jaw angle
+        );
+    }
+
+    // -----------------------------------------------------------------------
     // Pikachu (simplified face)
     // -----------------------------------------------------------------------
     private EquationPreset pikachu() {
         return new EquationPreset(
                 "Pikachu 😊", "Pikachu face outline with ears and cheeks", 45.0,
-                EquationEntry.of("x^2/12 + y^2/11 <= 1",                            "#FFD700"), // head (yellow)
-                EquationEntry.of("(y-10)^2 = 18*x + 110 {2.12<=y<=6.88}",                  "#000000"), // left ear (black)
-                EquationEntry.of("(y-1)^2 = -8*x - 10 {2.89<=y<=6.88}",                  "#000000"),
-                EquationEntry.of("(x+3)^2+(y-5.1)^2/5 = 1{y<=5.66,x<=-3.5}",                        "#000000"),
-                EquationEntry.of("-(y-7)^2= 4.5*x - 37 {2.03<=y<=4.92}",                     "#000000"), // right ear (black)
-                EquationEntry.of("(y-2.2)^2 = 1.2*x - 1.3{2.96<=y<=4.91}",                   "#000000"),
-                EquationEntry.of("(x-3)^2/5+(y-4.1)^2/3 = 1{x>=4.8,y<=4.42}",            "#000000"), // right eye
-                EquationEntry.of("(x+1.5)^2 + (y-0.5)^2 <= 0.3",            "#000000"), // left eye
-                EquationEntry.of("(x-1.5)^2 + (y-0.5)^2 <= 0.3",        "#000000"), // right cheek (red)
-                EquationEntry.of("(x+1.3)^2 + (y-0.7)^2 <= 0.03",        "#FFFFFF"), // left cheek (red)
-                EquationEntry.of("(x-1.7)^2 + (y-0.7)^2 <= 0.03",               "#FFFFFF"),
-                EquationEntry.of("(x+2.5)^2 + (y+1.2)^2 <= 0.4",               "#ff0000"),
-                EquationEntry.of("(x-2.5)^2 + (y+1.2)^2 <= 0.4",               "#ff0000"),
-                EquationEntry.of("x^2/0.03 + (y+0.2)^2/0.02 = 1",               "#000000"),
-                EquationEntry.of("y = 1.2*(x+0.5)^2 - 1.2 {-1 <= x <= 0}",               "#000000"),
-                EquationEntry.of("y = 1.2*(x-0.5)^2 - 1.2 {0 <= x <= 1}",               "#000000"),
-                EquationEntry.of("x^2/12 + y^2/11 = 1",                            "#000000")
+                EquationEntry.of("x^2+y^2=9",                            "#FFD700"), // head (yellow)
+                EquationEntry.of("y=-2*x-6{-4<=x<=-2}",                  "#2D2D2D"), // left ear (black)
+                EquationEntry.of("y=2*x+10{-4<=x<=-2}",                  "#2D2D2D"),
+                EquationEntry.of("y=2{-2<=x<=-2}",                        "#2D2D2D"),
+                EquationEntry.of("y=2*x-6{2<=x<=4}",                     "#2D2D2D"), // right ear (black)
+                EquationEntry.of("y=-2*x+10{2<=x<=4}",                   "#2D2D2D"),
+                EquationEntry.of("(x-1.2)^2+(y-0.8)^2=0.15",            "#1A1A1A"), // right eye
+                EquationEntry.of("(x+1.2)^2+(y-0.8)^2=0.15",            "#1A1A1A"), // left eye
+                EquationEntry.of("(x-2)^2/0.8+(y+0.5)^2/0.25=1",        "#FF4444"), // right cheek (red)
+                EquationEntry.of("(x+2)^2/0.8+(y+0.5)^2/0.25=1",        "#FF4444"), // left cheek (red)
+                EquationEntry.of("y=-0.3*x^2-1{-1<=x<=1}",               "#CC8800")  // mouth
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Pac-Man
+    // -----------------------------------------------------------------------
+    private EquationPreset pacman() {
+        return new EquationPreset(
+                "Pac-Man 👾", "Classic Pac-Man munching shape", 50.0,
+                EquationEntry.of("x^2+y^2=9{y>=x,y>=-x}",       "#FFCC00"), // body (yellow)
+                EquationEntry.of("y=x{0<=x<=3}",                  "#FFCC00"), // mouth top
+                EquationEntry.of("y=-x{0<=x<=3}",                 "#FFCC00"), // mouth bottom
+                EquationEntry.of("(x-0.5)^2+(y-2)^2=0.1",        "#1A1A1A"), // eye (black)
+                EquationEntry.of("(x-7)^2+y^2=4{y>=-1}",         "#00BFFF"), // ghost body (blue)
+                EquationEntry.of("y=-1{5<=x<=9}",                 "#00BFFF"), // ghost bottom
+                EquationEntry.of("(x-5)^2+(y+2)^2=1{y<=-1}",     "#00BFFF"), // ghost foot L
+                EquationEntry.of("(x-7)^2+(y+2)^2=1{y<=-1}",     "#00BFFF"), // ghost foot M
+                EquationEntry.of("(x-9)^2+(y+2)^2=1{y<=-1}",     "#00BFFF")  // ghost foot R
         );
     }
 }

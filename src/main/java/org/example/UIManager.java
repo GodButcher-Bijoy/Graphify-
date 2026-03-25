@@ -20,6 +20,8 @@ public class UIManager {
     private final VBox functionContainer;
     private final Runnable redrawCallback;
     private ScrollPane scrollPane;
+    private TextField activeTextField;
+    private boolean isKeypadVisible = false;
 
     public UIManager(AppState appState, Runnable redrawCallback) {
         this.appState = appState;
@@ -158,11 +160,23 @@ public class UIManager {
         inputBox.setPromptText("Ex: ax + b");
         inputBox.setStyle("-fx-background-color: transparent; -fx-text-fill: black; -fx-font-size: 15px; -fx-font-family: 'Verdana'; -fx-font-weight: bold;");
         inputBox.setPadding(new Insets(15, 80, 15, 35));
+        inputBox.focusedProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal) {
+                activeTextField = inputBox;
+                int currentIndex = functionContainer.getChildren().indexOf(mainRow);
+                appState.setFocusedEquationIndex(currentIndex);
+            } else {
+                appState.setFocusedEquationIndex(-1);
+                appState.getTemporaryPoints().clear();
+            }
+            redrawCallback.run();
+        });
 
         // --- NEW: Up / Down Arrow ও Enter দিয়ে নেভিগেশন (Fixed Version) ---
         inputBox.setOnKeyPressed(event -> {
             var rows = functionContainer.getChildren();
             int currentIndex = rows.indexOf(mainRow); // সরাসরি mainRow (VBox) এর ইনডেক্স বের করছি
+
             if (event.getCode() == KeyCode.UP) {
                 if (currentIndex > 0) {
                     focusTextFieldInRow(rows.get(currentIndex - 1));
@@ -188,16 +202,7 @@ public class UIManager {
                 }
             }
         });
-        inputBox.focusedProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal) {
-                int currentIndex = functionContainer.getChildren().indexOf(mainRow);
-                appState.setFocusedEquationIndex(currentIndex);
-            } else {
-                appState.setFocusedEquationIndex(-1);
-                appState.getTemporaryPoints().clear();
-            }
-            redrawCallback.run();
-        });
+
         HBox promptBox = new HBox(8);
         promptBox.setAlignment(Pos.CENTER_LEFT);
         promptBox.setPadding(new Insets(0, 10, 10, 35));
@@ -247,9 +252,11 @@ public class UIManager {
         };
         closeBtn.setOnAction(e -> deleteAction.run());
 
+        javafx.animation.PauseTransition debounce = new javafx.animation.PauseTransition(javafx.util.Duration.millis(150));
+        debounce.setOnFinished(evt -> redrawCallback.run());
         inputBox.textProperty().addListener((obs, oldVal, newVal) -> {
             updateSliderPrompt(newVal, promptBox, sliderContainer, inputBox);
-            redrawCallback.run();
+            debounce.playFromStart();
         });
 
         mainRow.getChildren().addAll(inputWrapper, sliderContainer);
@@ -378,20 +385,39 @@ public class UIManager {
         valInput.focusedProperty().addListener((obs, o, n) -> { if(!n) updateRange.run(); });
 
         slider.valueProperty().addListener((obs, o, n) -> {
-            if (!slider.isValueChanging() && !valInput.isFocused()) {
-                valInput.setText(String.format("%.2f", n));
-                appState.getGlobalVariables().put(varName, n.doubleValue());
-                redrawCallback.run();
+            appState.getGlobalVariables().put(varName, n.doubleValue());
+            valInput.setText(String.format("%.2f", n.doubleValue()));
+            redrawCallback.run();
+        });
+        // Play/Pause animation button
+        Button playBtn = new Button("\u25B6");
+        playBtn.setStyle("-fx-background-color: #4a8af4; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 2 8 2 8;");
+        playBtn.setFocusTraversable(false);
+
+        boolean[] goingForward = {true};
+        javafx.animation.Timeline timeline = new javafx.animation.Timeline(
+                new javafx.animation.KeyFrame(javafx.util.Duration.millis(30), evt -> {
+                    double span = slider.getMax() - slider.getMin();
+                    double step = span / 200.0;
+                    double newVal = slider.getValue() + (goingForward[0] ? step : -step);
+                    if (newVal >= slider.getMax()) { newVal = slider.getMax(); goingForward[0] = false; }
+                    else if (newVal <= slider.getMin()) { newVal = slider.getMin(); goingForward[0] = true; }
+                    slider.setValue(newVal);
+                }));
+        timeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
+
+        playBtn.setOnAction(e -> {
+            if (timeline.getStatus() == javafx.animation.Animation.Status.RUNNING) {
+                timeline.pause();
+                playBtn.setText("\u25B6");
+            } else {
+                timeline.play();
+                playBtn.setText("\u23F8");
             }
         });
 
-        slider.valueProperty().addListener((obs, o, n) -> {
-            appState.getGlobalVariables().put(varName, n.doubleValue());
-            valInput.setText(String.format("%.2f", n));
-            redrawCallback.run();
-        });
-
         closeBtn.setOnAction(e -> {
+            timeline.stop();
             sliderContainer.getChildren().remove(row);
             appState.getActiveSliderVars().remove(varName);
             updateSliderPrompt(inputBox.getText(), promptBox, sliderContainer, inputBox);
@@ -401,7 +427,7 @@ public class UIManager {
         HBox spacer = new HBox();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        row.getChildren().addAll(nameLbl, valInput, slider, spacer, closeBtn);
+        row.getChildren().addAll(nameLbl, valInput, slider, spacer, playBtn, closeBtn);
         sliderContainer.getChildren().add(row);
 
         updateSliderPrompt(inputBox.getText(), promptBox, sliderContainer, inputBox);
@@ -476,16 +502,398 @@ public class UIManager {
 
 
     private void focusTextFieldInRow(javafx.scene.Node row) {
-        if (row instanceof javafx.scene.layout.Pane) {
-            for (javafx.scene.Node child : ((javafx.scene.layout.Pane) row).getChildren()) {
-                if (child instanceof TextField) {
-                    TextField tf = (TextField) child;
-                    tf.requestFocus();
-                    // কার্সরটিকে টেক্সটের শেষে নিয়ে যাবে
-                    javafx.application.Platform.runLater(() -> tf.positionCaret(tf.getText().length()));
+        focusTextFieldInRowRobust(row);
+    }
+
+    // --- Full Width Keyboard (Dark Theme) ---
+
+
+    public VBox createFloatingKeypad() {
+        VBox overlay = new VBox();
+        overlay.setAlignment(Pos.BOTTOM_RIGHT);
+        overlay.setPickOnBounds(false);
+
+        // --- Toggle Button (Dark/Purple) ---
+        Button toggleBtn = new Button("⌨ Keypad");
+        toggleBtn.setStyle("-fx-background-color: #9D00FF; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold; -fx-background-radius: 15; -fx-padding: 8 16; -fx-cursor: hand;");
+        toggleBtn.setFocusTraversable(false);
+
+        HBox toggleWrapper = new HBox(toggleBtn);
+        toggleWrapper.setAlignment(Pos.BOTTOM_RIGHT);
+        toggleWrapper.setPadding(new Insets(0, 20, 10, 0));
+
+        // --- Main Keypad Container ---
+        HBox keypadAndFuncs = new HBox(15);
+        keypadAndFuncs.setAlignment(Pos.CENTER);
+        keypadAndFuncs.setMaxWidth(Double.MAX_VALUE);
+        keypadAndFuncs.setStyle("-fx-background-color: #1A1A1A; -fx-border-color: #333333; -fx-border-width: 2 0 0 0;");
+        keypadAndFuncs.setPadding(new Insets(15));
+        keypadAndFuncs.setVisible(false);
+        keypadAndFuncs.setManaged(false);
+
+        // --- ১. Left Side: Number & Math Pad ---
+        GridPane grid = new GridPane();
+        grid.setHgap(8); grid.setVgap(8);
+        grid.setAlignment(Pos.CENTER);
+
+        HBox.setHgrow(grid, Priority.ALWAYS);
+
+        for (int i = 0; i < 9; i++) {
+            ColumnConstraints col = new ColumnConstraints();
+            col.setPercentWidth(100.0 / 9.0);
+            grid.getColumnConstraints().add(col);
+        }
+
+        // ⚠️ NEW: "DEL" এর জায়গায় "⌫" এবং "!" এর জায়গায় "AC"
+        String[][] keys = {
+                {"x", "y", "a²", "aᵇ",  "7", "8", "9", "÷", "⌫"},
+                {"√", "|a|", "<", ">", "4", "5", "6", "×", "="},
+                {"(", ")", "≤", "≥",      "1", "2", "3", "-", "↵"},
+                {"pi", "e", ",", "%",     "0", ".", "AC", "+", ""}
+        };
+
+        for (int r = 0; r < 4; r++) {
+            for (int c = 0; c < 9; c++) {
+                String key = keys[r][c];
+                if (key.equals("")) continue;
+
+                Button btn = new Button(key);
+                btn.setFocusTraversable(false);
+                btn.setMaxWidth(Double.MAX_VALUE);
+
+                if (key.equals("↵")) {
+                    btn.setPrefHeight(98);
+                    GridPane.setRowSpan(btn, 2);
+                } else {
+                    btn.setPrefHeight(45);
+                }
+
+                // --- Dark Theme Button Colors ---
+                boolean isNumberOrDot = key.matches("[0-9.]");
+                if (key.equals("↵") || key.equals("=")) {
+                    btn.setStyle("-fx-background-color: #4a8af4; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 18px; -fx-cursor: hand; -fx-background-radius: 6;");
+                } else if (key.equals("⌫") || key.equals("AC")) {
+                    // ⚠️ NEW: ⌫ এবং AC দুটোই লাল রঙের হবে যাতে সহজে চোখে পড়ে
+                    btn.setStyle("-fx-background-color: #FF3B30; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15px; -fx-cursor: hand; -fx-background-radius: 6;");
+                } else if (isNumberOrDot || key.equals("x") || key.equals("y")) {
+                    btn.setStyle("-fx-background-color: #2D2D2D; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15px; -fx-cursor: hand; -fx-background-radius: 6;");
+                } else {
+                    btn.setStyle("-fx-background-color: #222222; -fx-text-fill: #E0E0E0; -fx-font-weight: bold; -fx-font-size: 14px; -fx-cursor: hand; -fx-background-radius: 6;");
+                }
+
+                btn.setOnAction(e -> handleKeypadInput(key));
+                grid.add(btn, c, r);
+            }
+        }
+
+        // --- ২. Right Side: Scrollable Functions ---
+        VBox funcsContainer = new VBox(10);
+        funcsContainer.setPadding(new Insets(5));
+        funcsContainer.setStyle("-fx-background-color: #1A1A1A;");
+
+        addFuncCategory(funcsContainer, "Trigonometry", "sin", "cos", "tan", "sec", "csc", "cot");
+        addFuncCategory(funcsContainer, "Inverse Trig", "asin", "acos", "atan");
+        addFuncCategory(funcsContainer, "Calculus", "d/dx", "int");
+        addFuncCategory(funcsContainer, "Math", "abs", "log");
+
+        ScrollPane scrollPane = new ScrollPane(funcsContainer);
+        scrollPane.setPrefViewportHeight(190);
+        scrollPane.setPrefWidth(180);
+        scrollPane.setMinWidth(180);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setStyle("-fx-background: #1A1A1A; -fx-background-color: transparent; -fx-border-color: #333333; -fx-border-width: 0 0 0 1; -fx-padding: 0 0 0 10;");
+        scrollPane.getStylesheets().add(createDarkScrollbarCSS());
+
+        keypadAndFuncs.getChildren().addAll(grid, scrollPane);
+
+        toggleBtn.setOnAction(e -> {
+            isKeypadVisible = !isKeypadVisible;
+            keypadAndFuncs.setVisible(isKeypadVisible);
+            keypadAndFuncs.setManaged(isKeypadVisible);
+        });
+
+        overlay.getChildren().addAll(toggleWrapper, keypadAndFuncs);
+        return overlay;
+    }
+    private void addFuncCategory(VBox container, String title, String... funcs) {
+        Label lbl = new Label(title);
+        lbl.setStyle("-fx-text-fill: #9D00FF; -fx-font-weight: bold; -fx-font-size: 12px;");
+        container.getChildren().add(lbl);
+
+        FlowPane flow = new FlowPane(5, 5);
+        for (String f : funcs) {
+            Button btn = new Button(f);
+            btn.setStyle("-fx-background-color: #333333; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 6;");
+            btn.setFocusTraversable(false);
+            btn.setOnAction(e -> handleKeypadInput(f + "("));
+            flow.getChildren().add(btn);
+        }
+        container.getChildren().add(flow);
+    }
+    private void handleKeypadInput(String key) {
+        if (activeTextField == null) return;
+
+        int caretPos = activeTextField.getCaretPosition();
+        String textToInsert = key;
+
+        switch (key) {
+            case "↵":
+                focusNextField();
+                return;
+            case "⌫": // ⚠️ NEW: ব্যাকস্পেস আইকনের লজিক
+                if (caretPos > 0) {
+                    activeTextField.deleteText(caretPos - 1, caretPos);
+                    activeTextField.positionCaret(caretPos - 1);
+                }
+                return;
+            case "AC": // ⚠️ NEW: All Clear লজিক, পুরো টেক্সট মুছে ফেলবে
+                activeTextField.clear();
+                return;
+            case "a²": textToInsert = "^2"; break;
+            case "aᵇ": textToInsert = "^"; break;
+            case "√": textToInsert = "sqrt("; break;
+            case "|a|": textToInsert = "abs("; break;
+            case "÷": textToInsert = "/"; break;
+            case "×": textToInsert = "*"; break;
+            case "≤": textToInsert = "<="; break;
+            case "≥": textToInsert = ">="; break;
+        }
+
+        activeTextField.insertText(caretPos, textToInsert);
+        activeTextField.positionCaret(caretPos + textToInsert.length());
+    }
+    // Enter (↵) বাটনের আপডেট লজিক
+    private void focusNextField() {
+        if (activeTextField != null && functionContainer != null) {
+            var rows = functionContainer.getChildren();
+            int currentIndex = -1;
+
+            // ১. বর্তমান টেক্সটফিল্ডটি কোন রো (Row) এর ভেতর আছে তা খুঁজে বের করা
+            for (int i = 0; i < rows.size(); i++) {
+                if (containsNode(rows.get(i), activeTextField)) {
+                    currentIndex = i;
                     break;
                 }
             }
+
+            // ২. যদি বর্তমান বক্সটি পাওয়া যায়
+            if (currentIndex != -1) {
+                if (currentIndex == rows.size() - 1) {
+                    // যদি এটি একদম শেষের বক্স হয়, তবে নতুন একটি বক্স তৈরি করবে
+                    addFunctionInputBox(currentIndex + 1);
+                } else {
+                    // যদি নিচে আরও বক্স থাকে, তবে শুধু নিচের বক্সে ফোকাস করবে
+                    focusTextFieldInRowRobust(rows.get(currentIndex + 1));
+                }
+            }
         }
+    }
+
+    // হেল্পার মেথড ১: টেক্সটফিল্ডটি কোনো কন্টেইনারের ভেতর আছে কি না তা ডিপ-সার্চ করে
+    private boolean containsNode(javafx.scene.Node parent, javafx.scene.Node target) {
+        if (parent == target) return true;
+        if (parent instanceof javafx.scene.layout.Pane) {
+            for (javafx.scene.Node child : ((javafx.scene.layout.Pane) parent).getChildren()) {
+                if (containsNode(child, target)) return true;
+            }
+        }
+        return false;
+    }
+
+    private void focusTextFieldInRowRobust(javafx.scene.Node node) {
+        findAndFocusTextField(node);
+    }
+
+    private boolean findAndFocusTextField(javafx.scene.Node node) {
+        if (node instanceof TextField) {
+            TextField tf = (TextField) node;
+            tf.requestFocus();
+            activeTextField = tf;
+            javafx.application.Platform.runLater(() -> tf.positionCaret(tf.getText().length()));
+            return true;
+        }
+        if (node instanceof javafx.scene.layout.Pane) {
+            for (javafx.scene.Node child : ((javafx.scene.layout.Pane) node).getChildren()) {
+                if (findAndFocusTextField(child)) return true;
+            }
+        }
+        return false;
+    }
+    private String createDarkScrollbarCSS() {
+        String css = ".scroll-pane .scroll-bar:vertical { -fx-background-color: #1A1A1A; } " +
+                ".scroll-pane .scroll-bar:vertical .track { -fx-background-color: #1A1A1A; } " +
+                ".scroll-pane .scroll-bar:vertical .thumb { -fx-background-color: #555; -fx-background-radius: 5; } " +
+                ".scroll-pane .scroll-bar:vertical .thumb:hover { -fx-background-color: #777; }";
+        return "data:text/css;base64," + java.util.Base64.getEncoder().encodeToString(css.getBytes());
+    }
+
+    private void addItems(Menu menu, String... items) {
+        for (String s : items) {
+            MenuItem item = new MenuItem(s);
+            item.setStyle("-fx-text-fill: black;");
+            item.setOnAction(e -> {
+                if (activeTextField != null) {
+                    int caretPos = activeTextField.getCaretPosition();
+                    activeTextField.insertText(caretPos, s);
+                    // লেখার সাইজ অনুযায়ী কার্সরকে সামনে সরিয়ে দেওয়া
+                    activeTextField.positionCaret(caretPos + s.length());
+                }
+            });
+            menu.getItems().add(item);
+        }
+    }
+    // -------------------------------------------------------------------------
+    // NEW: loadPreset
+    // Called from MainApp1 when the user picks an equation from the Library menu.
+    // -------------------------------------------------------------------------
+    public void loadPreset(EquationPreset preset) {
+        functionContainer.getChildren().clear();
+
+        // Reset viewport so the shape is nicely centred
+        appState.setScale(preset.getSuggestedScale());
+        appState.setOffsetX(0);
+        appState.setOffsetY(0);
+
+        List<EquationEntry> entries = preset.getEntries();
+
+        if (entries == null || entries.isEmpty()) {
+            addFunctionInputBox(0);
+            redrawCallback.run();
+            return;
+        }
+
+        // Populate rows — every equation gets its individually specified color
+        for (int i = 0; i < entries.size(); i++) {
+            addFunctionInputBoxSilent(i, entries.get(i).getEquation(), entries.get(i).getColor());
+        }
+
+        // Leave one blank row so the user can keep adding equations
+        addFunctionInputBox(entries.size());
+
+        redrawCallback.run();
+    }
+
+    // -------------------------------------------------------------------------
+    // NEW: addFunctionInputBoxSilent
+    // Same as addFunctionInputBox() but pre-fills text and skips auto-focus.
+    //   • Uses the exact Color passed in (no appState.getNextColor() call)
+    //   • Pre-fills the TextField with initialText immediately
+    //   • Does NOT steal keyboard focus — avoids janky multi-row loading
+    // -------------------------------------------------------------------------
+    private void addFunctionInputBoxSilent(int insertIndex, String initialText, javafx.scene.paint.Color assignedColor) {
+        VBox mainRow = new VBox(5);
+        mainRow.setStyle("-fx-background-color: transparent;");
+
+        mainRow.setUserData(assignedColor);   // color stored here, read by GraphRenderer
+
+        VBox fieldAndPrompt = new VBox(0);
+        fieldAndPrompt.setStyle("-fx-background-color: White; -fx-background-radius: 10; "
+                + "-fx-border-color: #9D00FF; -fx-border-width: 2; -fx-border-radius: 10;");
+
+        TextField inputBox = new TextField(initialText);   // pre-filled, no empty box
+        inputBox.setPromptText("Ex: ax + b");
+        inputBox.setStyle("-fx-background-color: transparent; -fx-text-fill: black; "
+                + "-fx-font-size: 15px; -fx-font-family: 'Verdana'; -fx-font-weight: bold;");
+        inputBox.setPadding(new Insets(15, 80, 15, 35));
+
+        inputBox.focusedProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal) {
+                activeTextField = inputBox;
+                int currentIndex = functionContainer.getChildren().indexOf(mainRow);
+                appState.setFocusedEquationIndex(currentIndex);
+            } else {
+                appState.setFocusedEquationIndex(-1);
+                appState.getTemporaryPoints().clear();
+            }
+            redrawCallback.run();
+        });
+
+        inputBox.setOnKeyPressed(event -> {
+            var rows = functionContainer.getChildren();
+            int currentIndex = rows.indexOf(mainRow);
+            if (event.getCode() == KeyCode.UP) {
+                if (currentIndex > 0) { focusTextFieldInRow(rows.get(currentIndex - 1)); event.consume(); }
+            } else if (event.getCode() == KeyCode.DOWN) {
+                if (currentIndex < rows.size() - 1) { focusTextFieldInRow(rows.get(currentIndex + 1)); event.consume(); }
+            } else if (event.getCode() == KeyCode.ENTER) {
+                addFunctionInputBox(currentIndex + 1);
+                event.consume();
+            } else if (event.getCode() == KeyCode.BACK_SPACE && inputBox.getText().isEmpty()) {
+                if (currentIndex > 0) {
+                    focusTextFieldInRow(rows.get(currentIndex - 1));
+                    rows.remove(mainRow);
+                    redrawCallback.run();
+                    event.consume();
+                }
+            }
+        });
+
+        HBox promptBox = new HBox(8);
+        promptBox.setAlignment(Pos.CENTER_LEFT);
+        promptBox.setPadding(new Insets(0, 10, 10, 35));
+        promptBox.setVisible(false);
+        promptBox.setManaged(false);
+
+        fieldAndPrompt.getChildren().addAll(inputBox, promptBox);
+
+        StackPane inputWrapper = new StackPane();
+        // Colour dot — uses the fixed category colour, not a random one
+        javafx.scene.shape.Circle colorDot = new javafx.scene.shape.Circle(6, assignedColor);
+        StackPane.setAlignment(colorDot, Pos.TOP_LEFT);
+        StackPane.setMargin(colorDot, new Insets(20, 0, 0, 15));
+        colorDot.setCursor(javafx.scene.Cursor.HAND);
+        colorDot.setOnMouseClicked(event -> showColorPopup(colorDot, mainRow, event));
+
+        HBox buttonBox = new HBox(8);
+        buttonBox.setAlignment(Pos.TOP_RIGHT);
+        buttonBox.setMaxWidth(70);
+        buttonBox.setPickOnBounds(false);
+        StackPane.setAlignment(buttonBox, Pos.TOP_RIGHT);
+        StackPane.setMargin(buttonBox, new Insets(10, 10, 0, 0));
+
+        Button closeBtn = createIconButton(
+                "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
+                "gray", 10);
+        HBox.setMargin(closeBtn, new Insets(5, 8, 0, 0));
+        closeBtn.setOnMouseEntered(e -> ((SVGPath) closeBtn.getGraphic()).setFill(Color.RED));
+        closeBtn.setOnMouseExited(e -> ((SVGPath) closeBtn.getGraphic()).setFill(Color.GRAY));
+
+        buttonBox.getChildren().add(closeBtn);
+        inputWrapper.getChildren().addAll(fieldAndPrompt, colorDot, buttonBox);
+
+        VBox sliderContainer = new VBox(5);
+        sliderContainer.setPadding(new Insets(5, 0, 0, 20));
+
+        Runnable deleteAction = () -> {
+            if (functionContainer.getChildren().size() > 1) {
+                functionContainer.getChildren().remove(mainRow);
+                redrawCallback.run();
+            } else {
+                inputBox.clear();
+                sliderContainer.getChildren().clear();
+                redrawCallback.run();
+            }
+        };
+        closeBtn.setOnAction(e -> deleteAction.run());
+
+        javafx.animation.PauseTransition debounce =
+                new javafx.animation.PauseTransition(javafx.util.Duration.millis(150));
+        debounce.setOnFinished(evt -> redrawCallback.run());
+        inputBox.textProperty().addListener((obs, oldVal, newVal) -> {
+            updateSliderPrompt(newVal, promptBox, sliderContainer, inputBox);
+            debounce.playFromStart();
+        });
+
+        mainRow.getChildren().addAll(inputWrapper, sliderContainer);
+
+        if (insertIndex >= 0 && insertIndex <= functionContainer.getChildren().size()) {
+            functionContainer.getChildren().add(insertIndex, mainRow);
+        } else {
+            functionContainer.getChildren().add(mainRow);
+        }
+        // NOTE: No requestFocus() call — caller drives focus after all rows are built.
+        // difference from addFunctionInputBox(). The caller drives focus.
     }
 }

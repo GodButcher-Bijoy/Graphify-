@@ -30,7 +30,7 @@ public class AppState {
     // Colors for different graphs
     // 20 ta distinct and beautiful colors
     private final Color[] graphColors = {
-            Color.web("#FF3B30"), Color.web("#007AFF"), Color.web("#34C759"), Color.web("#FF9500"), Color.web("#AF52DE"),
+            Color.web("#000000"), Color.web("#007AFF"), Color.web("#34C759"), Color.web("#FF9500"), Color.web("#AF52DE"),
             Color.web("#5AC8FA"), Color.web("#5856D6"), Color.web("#FF2D55"), Color.web("#8E8E93"), Color.web("#E5C07B"),
             Color.web("#D19A66"), Color.web("#98C379"), Color.web("#61AFEF"), Color.web("#C678DD"), Color.web("#56B6C2"),
             Color.web("#E06C75"), Color.web("#F0E68C"), Color.web("#FF6347"), Color.web("#7FFFD4")

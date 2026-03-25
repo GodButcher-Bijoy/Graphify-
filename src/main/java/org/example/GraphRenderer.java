@@ -109,25 +109,60 @@ public class GraphRenderer {
                 VBox fieldAndPrompt = (VBox) inputWrapper.getChildren().get(0);
                 TextField inputBox = (TextField) fieldAndPrompt.getChildren().get(0);
 
-                String equation = inputBox.getText();
-                String eq = equation.trim().replace(" ", "");
+                String rawInput = inputBox.getText().trim();
+                if (rawInput.isEmpty()) continue;
 
-                if (eq.startsWith("(") && eq.endsWith(")")) {
+                String eqStr = rawInput.replace(" ", "");
+                FunctionPlotter.BoundaryCondition boundary = null;
+
+                // ⚠️ NEW: বাউন্ডারি কন্ডিশন { } চেক করা এবং আলাদা করা
+                if (eqStr.contains("{") && eqStr.contains("}")) {
+                    int start = eqStr.lastIndexOf("{");
+                    int end = eqStr.lastIndexOf("}");
+                    if (start < end) {
+                        String condStr = eqStr.substring(start + 1, end);
+                        eqStr = eqStr.substring(0, start); // কন্ডিশন ছাড়া শুধু সমীকরণ
+                        boundary = new FunctionPlotter.BoundaryCondition(condStr, appState.getGlobalVariables());
+                    }
+                }
+
+                if (eqStr.startsWith("(") && eqStr.endsWith(")")) {
                     try {
-                        String[] parts = eq.substring(1, eq.length() - 1).split(",");
+                        String[] parts = eqStr.substring(1, eqStr.length() - 1).split(",");
                         if (parts.length == 2) {
-                            double pX = EquationHandler.buildExpression(parts[0], "x", appState.getGlobalVariables()).evaluate();
-                            double pY = EquationHandler.buildExpression(parts[1], "x", appState.getGlobalVariables()).evaluate();
-                            double screenX = centerX + (pX * appState.getScale());
-                            double screenY = centerY - (pY * appState.getScale());
-                            gc.setFill(rowColor);
-                            gc.fillOval(screenX - 5, screenY - 5, 10, 10);
-                            gc.setFill(Color.BLACK);
-                            gc.fillText("(" + formatNumber(pX) + ", " + formatNumber(pY) + ")", screenX + 10, screenY - 10);
+                            String xPart = parts[0].trim();
+                            String yPart = parts[1].trim();
+
+                            // ⚠️ NEW: প্যারামেট্রিক ইকুয়েশন (t) চেক করা
+                            if (xPart.contains("t") || yPart.contains("t")) {
+                                functionPlotter.plotParametric(xPart, yPart, rowColor, centerX, centerY, width, height, boundary);
+                            } else {
+                                // সাধারণ পয়েন্ট ড্র করা
+                                double pX = EquationHandler.buildExpression(xPart, "x", appState.getGlobalVariables()).evaluate();
+                                double pY = EquationHandler.buildExpression(yPart, "x", appState.getGlobalVariables()).evaluate();
+
+                                // ⚠️ NEW: পয়েন্টের উপর বাউন্ডারি চেক
+                                if (boundary != null && !boundary.test(pX, pY, 0)) continue;
+
+                                double screenX = centerX + (pX * appState.getScale());
+                                double screenY = centerY - (pY * appState.getScale());
+
+                                gc.setFill(rowColor);
+                                gc.fillOval(screenX - 5, screenY - 5, 10, 10);
+                                gc.setFill(Color.BLACK);
+                                gc.fillText("(" + formatNumber(pX) + ", " + formatNumber(pY) + ")", screenX + 10, screenY - 10);
+                            }
                         }
                     } catch (Exception ex) {}
                 } else {
-                    functionPlotter.plotEquation(equation, rowColor, centerX, centerY, width, height);
+                    String[] ineq = detectInequality(eqStr);
+                    if (ineq != null && ineq.length == 5) {
+                        functionPlotter.plotCompoundInequality(ineq[0], ineq[1], ineq[2], ineq[3], ineq[4], rowColor, centerX, centerY, width, height, boundary);
+                    } else if (ineq != null) {
+                        functionPlotter.plotInequality(ineq[0], ineq[1], ineq[2], rowColor, centerX, centerY, width, height, boundary);
+                    } else {
+                        functionPlotter.plotEquation(eqStr, rowColor, centerX, centerY, width, height, boundary);
+                    }
                 }
             }
         }
@@ -172,6 +207,36 @@ public class GraphRenderer {
         double rounded = Math.round(val * 1e8) / 1e8;
         if (Math.abs(rounded - Math.round(rounded)) < 1e-9) return String.valueOf((long) Math.round(rounded));
         return String.format("%.5f", rounded).replaceAll("0+$", "").replaceAll("\\.$", "");
+    }
+
+    private String[] detectInequality(String eq) {
+        java.util.List<Integer> starts = new java.util.ArrayList<>();
+        java.util.List<Integer> lengths = new java.util.ArrayList<>();
+        java.util.List<String> ops = new java.util.ArrayList<>();
+        for (int i = 0; i < eq.length(); i++) {
+            if (i < eq.length() - 1 && eq.startsWith("<=", i)) {
+                starts.add(i); lengths.add(2); ops.add("<="); i++;
+            } else if (i < eq.length() - 1 && eq.startsWith(">=", i)) {
+                starts.add(i); lengths.add(2); ops.add(">="); i++;
+            } else if (eq.charAt(i) == '<') {
+                starts.add(i); lengths.add(1); ops.add("<");
+            } else if (eq.charAt(i) == '>') {
+                starts.add(i); lengths.add(1); ops.add(">");
+            }
+        }
+        if (ops.size() == 0) return null;
+        if (ops.size() == 1) {
+            int p = starts.get(0), l = lengths.get(0);
+            return new String[]{eq.substring(0, p).trim(), ops.get(0), eq.substring(p + l).trim()};
+        }
+        if (ops.size() == 2) {
+            int p1 = starts.get(0), l1 = lengths.get(0);
+            int p2 = starts.get(1), l2 = lengths.get(1);
+            return new String[]{eq.substring(0, p1).trim(), ops.get(0),
+                    eq.substring(p1 + l1, p2).trim(), ops.get(1),
+                    eq.substring(p2 + l2).trim()};
+        }
+        return null;
     }
 
     // --- INTERSECTION LOGIC ---
@@ -280,6 +345,84 @@ public class GraphRenderer {
                 }
             }
         }
+        addExtrema(focusedEq, startX, endX, startY, endY);
+    }
+
+    private void addExtrema(EqWrapper eq, double startX, double endX, double startY, double endY) {
+        if (eq == null || eq.expr == null || eq.type == 2) return;
+        final int STEPS = 500;
+
+        if (eq.type == 0) {
+            double h = (endX - startX) / STEPS;
+            double eps = h * 1e-4;
+            double prevDeriv = Double.NaN;
+            double prevX = startX;
+            for (int i = 1; i <= STEPS; i++) {
+                double x = startX + i * h;
+                try {
+                    eq.expr.setVariable("x", x - eps);
+                    double ym = eq.expr.evaluate();
+                    eq.expr.setVariable("x", x + eps);
+                    double yp = eq.expr.evaluate();
+                    double deriv = yp - ym;
+                    if (!Double.isNaN(prevDeriv) && !Double.isInfinite(deriv) && !Double.isNaN(deriv)
+                            && Math.abs(deriv) < 1e10 && Math.abs(prevDeriv) < 1e10
+                            && prevDeriv * deriv < 0) {
+                        double lo = prevX, hi = x;
+                        for (int iter = 0; iter < 50; iter++) {
+                            double mid = (lo + hi) / 2.0;
+                            eq.expr.setVariable("x", mid - eps);
+                            double ym2 = eq.expr.evaluate();
+                            eq.expr.setVariable("x", mid + eps);
+                            double yp2 = eq.expr.evaluate();
+                            double dMid = yp2 - ym2;
+                            if (dMid * prevDeriv > 0) lo = mid; else hi = mid;
+                        }
+                        double extremX = (lo + hi) / 2.0;
+                        eq.expr.setVariable("x", extremX);
+                        double extremY = eq.expr.evaluate();
+                        if (!Double.isNaN(extremY) && !Double.isInfinite(extremY)) addTempPoint(extremX, extremY);
+                    }
+                    prevDeriv = deriv;
+                    prevX = x;
+                } catch (Exception ignored) { prevDeriv = Double.NaN; prevX = x; }
+            }
+        } else if (eq.type == 1) {
+            double h = (endY - startY) / STEPS;
+            double eps = h * 1e-4;
+            double prevDeriv = Double.NaN;
+            double prevY = startY;
+            for (int i = 1; i <= STEPS; i++) {
+                double y = startY + i * h;
+                try {
+                    eq.expr.setVariable("y", y - eps);
+                    double xm = eq.expr.evaluate();
+                    eq.expr.setVariable("y", y + eps);
+                    double xp = eq.expr.evaluate();
+                    double deriv = xp - xm;
+                    if (!Double.isNaN(prevDeriv) && !Double.isInfinite(deriv) && !Double.isNaN(deriv)
+                            && Math.abs(deriv) < 1e10 && Math.abs(prevDeriv) < 1e10
+                            && prevDeriv * deriv < 0) {
+                        double lo = prevY, hi = y;
+                        for (int iter = 0; iter < 50; iter++) {
+                            double mid = (lo + hi) / 2.0;
+                            eq.expr.setVariable("y", mid - eps);
+                            double xm2 = eq.expr.evaluate();
+                            eq.expr.setVariable("y", mid + eps);
+                            double xp2 = eq.expr.evaluate();
+                            double dMid = xp2 - xm2;
+                            if (dMid * prevDeriv > 0) lo = mid; else hi = mid;
+                        }
+                        double extremY2 = (lo + hi) / 2.0;
+                        eq.expr.setVariable("y", extremY2);
+                        double extremX2 = eq.expr.evaluate();
+                        if (!Double.isNaN(extremX2) && !Double.isInfinite(extremX2)) addTempPoint(extremX2, extremY2);
+                    }
+                    prevDeriv = deriv;
+                    prevY = y;
+                } catch (Exception ignored) { prevDeriv = Double.NaN; prevY = y; }
+            }
+        }
     }
 
     private void validatePinnedPoints() {
@@ -302,25 +445,44 @@ public class GraphRenderer {
             for (EqWrapper eq : allExprs) {
                 if (crossesBox(eq, p.getX() - threshold, p.getX() + threshold, p.getY() - threshold, p.getY() + threshold)) crossingCount++;
             }
-            return crossingCount < 2;
+            return crossingCount < 1;
         });
     }
 
     private void drawPoints(double cx, double cy) {
         double scale = appState.getScale();
-        gc.setFill(Color.web("#888888", 0.7));
+        gc.setFill(Color.web("#3b3535", 1.0));
         for (Point2D p : appState.getTemporaryPoints()) {
-            double screenX = cx + p.getX() * scale; double screenY = cy - p.getY() * scale;
-            gc.fillOval(screenX - 4, screenY - 4, 8, 8); gc.setStroke(Color.WHITE); gc.setLineWidth(1); gc.strokeOval(screenX - 4, screenY - 4, 8, 8);
+            double screenX = cx + p.getX() * scale;
+            double screenY = cy - p.getY() * scale;
+            gc.fillOval(screenX - 4, screenY - 4, 8, 8);
+            gc.setStroke(Color.web("#3b3535", 0.0));
+            gc.strokeOval(screenX - 4, screenY - 4, 8, 8);
         }
-        gc.setFont(Font.font("Arial", 12));
+
+        gc.setFont(Font.font("Arial", 14));
         for (Point2D p : appState.getPinnedPoints()) {
-            double screenX = cx + p.getX() * scale; double screenY = cy - p.getY() * scale;
-            gc.setFill(Color.web("#007AFF")); gc.fillOval(screenX - 5, screenY - 5, 10, 10);
-            gc.setStroke(Color.WHITE); gc.strokeOval(screenX - 5, screenY - 5, 10, 10);
-            String label = String.format("(%.2f, %.2f)", p.getX(), p.getY());
-            gc.setFill(Color.web("#222222", 0.8)); gc.fillRoundRect(screenX + 12, screenY - 20, 80, 22, 5, 5);
-            gc.setFill(Color.WHITE); gc.fillText(label, screenX + 15, screenY - 4);
+            double screenX = cx + p.getX() * scale;
+            double screenY = cy - p.getY() * scale;
+
+            // ১. পিন করা পয়েন্টের গোল্লা আঁকা
+            gc.setFill(Color.web("#007AFF"));
+            gc.fillOval(screenX - 5, screenY - 5, 10, 10);
+            gc.setStroke(Color.web("#888888", 0.0));
+            gc.strokeOval(screenX - 5, screenY - 5, 10, 10);
+
+            // ২. নেগেটিভ জিরো ফিক্স করা
+            double xVal = Math.abs(p.getX()) < 0.0001 ? 0.0 : p.getX();
+            double yVal = Math.abs(p.getY()) < 0.0001 ? 0.0 : p.getY();
+            String label = String.format("(%.2f, %.2f)", xVal, yVal);
+
+            // ৩. লেবেল বক্সের কালার পরিবর্তন (এখানে পছন্দমতো কালার দিন)
+            gc.setFill(Color.web("#2c3e50", 0.9)); // সুন্দর ডার্ক থিম
+            gc.fillRoundRect(screenX + 12, screenY - 22, 90, 25, 6, 6);
+
+            // ৪. টেক্সট আঁকা
+            gc.setFill(Color.WHITE);
+            gc.fillText(label, screenX + 18, screenY - 4);
         }
     }
 }

@@ -5,18 +5,21 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Button;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
-
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 
 public class MainApp1 extends Application {
 
     @Override
     public void start(Stage stage) {
-        // IntroScene তৈরি ও শো করা হচ্ছে। ক্লিক করলে মেইন সিন ওপেন হবে।
         Scene introScene = IntroScene.create(stage, () -> {
             Scene mainScene = createMainScene();
             stage.setScene(mainScene);
@@ -30,65 +33,139 @@ public class MainApp1 extends Application {
 
     private Scene createMainScene() {
         BorderPane root = new BorderPane();
-        // ডার্ক ব্যাকগ্রাউন্ড, যাতে গ্রাফের চারপাশের ২০ পিক্সেল গ্যাপটা অ্যাপের থিমের সাথে মিশে যায়
         root.setStyle("-fx-background-color: #333333;");
 
-        // ১. AppState তৈরি (ডেটা ম্যানেজ করার জন্য)
         AppState appState = new AppState();
 
-        // ২. Canvas ও Graph Pane সেটআপ
+        // Circular dependency resolver
+        Runnable[] redrawAction = new Runnable[1];
+
+        UIManager uiManager = new UIManager(appState, () -> {
+            if (redrawAction[0] != null) redrawAction[0].run();
+        });
+
+        // Graph pane + canvas
         Pane graphPane = new Pane();
-        // বর্ডার মুছে background-radius অ্যাড করলাম যাতে কোণাগুলো সুন্দর গোল হয় (Floating Island)
         graphPane.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 12;");
-        // চারপাশে ২০ পিক্সেলের একটা সুন্দর গ্যাপ তৈরি করবে
         BorderPane.setMargin(graphPane, new Insets(20));
 
         Canvas canvas = new Canvas();
-        Button homeBtn = new Button("🏠 Home");
-        // Button er design (Desmos style floating button)
-        homeBtn.setStyle("-fx-background-color: white; -fx-border-color: #ccc; -fx-background-radius: 5; -fx-border-radius: 5; -fx-cursor: hand;");
         canvas.widthProperty().bind(graphPane.widthProperty());
         canvas.heightProperty().bind(graphPane.heightProperty());
         graphPane.getChildren().add(canvas);
-        StackPane centerWrapper = new StackPane();
-        // graphPane আগে add করো
-        centerWrapper.getChildren().add(graphPane);
-        // তারপর button add করো
-        centerWrapper.getChildren().add(homeBtn);
-        // top-right alignment
+
+        // ── Home button (top-right) ──────────────────────────────────────────
+        Button homeBtn = new Button("🏠 Home");
+        homeBtn.setStyle(
+                "-fx-background-color: white; -fx-border-color: #ccc; " +
+                        "-fx-background-radius: 8; -fx-border-radius: 8; -fx-cursor: hand; " +
+                        "-fx-font-size: 13px; -fx-padding: 6 14;"
+        );
         StackPane.setAlignment(homeBtn, Pos.TOP_RIGHT);
         StackPane.setMargin(homeBtn, new Insets(15));
 
+        // ── Library button (top-left) ────────────────────────────────────────
+        Button libraryBtn = new Button("📚 Library ▾");
+        libraryBtn.setStyle(
+                "-fx-background-color: #9D00FF; -fx-text-fill: white; -fx-font-weight: bold; " +
+                        "-fx-background-radius: 8; -fx-cursor: hand; " +
+                        "-fx-font-size: 13px; -fx-padding: 6 14;"
+        );
+        StackPane.setAlignment(libraryBtn, Pos.TOP_LEFT);
+        StackPane.setMargin(libraryBtn, new Insets(15));
 
-        // --- বাগ ফিক্স: Circular Dependency সলভ করা হলো ---
-        // একটি ফাঁকা অ্যাকশন তৈরি করে রাখছি, যা পরে আপডেট করে দেবো
-        Runnable[] redrawAction = new Runnable[1];
-
-        // ৩. UIManager তৈরি (একটাই বানাবো এবার)
-        UIManager uiManager = new UIManager(appState, () -> {
-            if (redrawAction[0] != null) {
-                redrawAction[0].run();
+        // ── Build the dropdown ContextMenu from EquationLibrary ──────────────
+        ContextMenu libraryMenu = buildLibraryMenu(uiManager);
+        libraryBtn.setOnAction(e -> {
+            if (libraryMenu.isShowing()) {
+                libraryMenu.hide();
+            } else {
+                libraryMenu.show(libraryBtn,
+                        javafx.geometry.Side.BOTTOM, 0, 4);
             }
         });
 
-        // ৪. GraphRenderer তৈরি
+        // Center wrapper: graph + overlay buttons + keypad
+        StackPane centerWrapper = new StackPane();
+        centerWrapper.getChildren().add(graphPane);
+        centerWrapper.getChildren().add(homeBtn);
+        centerWrapper.getChildren().add(libraryBtn);
+
+        VBox floatingKeypad = uiManager.createFloatingKeypad();
+        StackPane.setAlignment(floatingKeypad, Pos.BOTTOM_CENTER);
+        centerWrapper.getChildren().add(floatingKeypad);
+
+        // GraphRenderer
         GraphRenderer graphRenderer = new GraphRenderer(appState, canvas, uiManager.getFunctionContainer());
-        // GraphRenderer তৈরি হয়ে গেলে এবার অ্যাকশনটার ভেতরে আসল কমান্ড দিয়ে দিচ্ছি
         redrawAction[0] = () -> graphRenderer.drawGraph();
-        // ------------------------------------------------
+
         homeBtn.setOnAction(e -> {
-            appState.setScale(40); // Tomar default scale
+            appState.setScale(40);
             appState.setOffsetX(0);
             appState.setOffsetY(0);
-            graphRenderer.drawGraph(); // Graph redraw korbe
+            graphRenderer.drawGraph();
         });
-        // ৫. লেআউটে যোগ করা
+
         root.setLeft(uiManager.createSidebar());
         root.setCenter(centerWrapper);
 
-        // প্রথমবার গ্রাফ আঁকার জন্য
         graphRenderer.drawGraph();
         return new Scene(root, 1100, 750);
+    }
+
+    // =========================================================================
+    // Build the nested ContextMenu from EquationLibrary
+    // =========================================================================
+    private ContextMenu buildLibraryMenu(UIManager uiManager) {
+        EquationLibrary library = new EquationLibrary();
+        ContextMenu menu = new ContextMenu();
+
+        // Style the context menu dark
+        menu.setStyle(
+                "-fx-background-color: #1A1A1A; " +
+                        "-fx-border-color: #9D00FF; -fx-border-width: 1.5; " +
+                        "-fx-background-radius: 10; -fx-border-radius: 10;"
+        );
+
+        for (EquationCategory category : library.getCategories()) {
+            // Category header (non-clickable label row)
+            MenuItem catLabel = new MenuItem(category.getMenuLabel());
+            catLabel.setStyle(
+                    "-fx-text-fill: #9D00FF; -fx-font-weight: bold; -fx-font-size: 13px;"
+            );
+            catLabel.setDisable(true);          // header row is not clickable
+            menu.getItems().add(catLabel);
+
+            // One MenuItem per preset in this category
+            for (EquationPreset preset : category.getPresets()) {
+                MenuItem presetItem = new MenuItem("    " + preset.getName());
+                presetItem.setStyle(
+                        "-fx-text-fill: #EEEEEE; -fx-font-size: 13px;"
+                );
+
+                // On click: load the preset — each equation uses its own built-in color
+                presetItem.setOnAction(e -> {
+                    uiManager.loadPreset(preset);
+                    menu.hide();
+                });
+
+                menu.getItems().add(presetItem);
+            }
+
+            // Separator between categories
+            SeparatorMenuItem sep = new SeparatorMenuItem();
+            menu.getItems().add(sep);
+        }
+
+        // Remove trailing separator
+        if (!menu.getItems().isEmpty()) {
+            int last = menu.getItems().size() - 1;
+            if (menu.getItems().get(last) instanceof SeparatorMenuItem) {
+                menu.getItems().remove(last);
+            }
+        }
+
+        return menu;
     }
 
     public static void main(String[] args) {
