@@ -21,9 +21,11 @@ public class MainApp1 extends Application {
     @Override
     public void start(Stage stage) {
         Scene introScene = IntroScene.create(stage, () -> {
-            Scene mainScene = createMainScene();
-            stage.setScene(mainScene);
-            stage.centerOnScreen();
+            // Notun scene na toiri kore, just bhitorer ui (root) ta nilam
+            BorderPane mainRoot = createMainUI();
+
+            // Current scene-er content ta ek sec-e replace kore dilam!
+            stage.getScene().setRoot(mainRoot);
         });
 
         stage.setTitle("Graphify");
@@ -31,7 +33,7 @@ public class MainApp1 extends Application {
         stage.show();
     }
 
-    private Scene createMainScene() {
+    private BorderPane createMainUI() {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: #333333;");
 
@@ -110,7 +112,7 @@ public class MainApp1 extends Application {
         root.setCenter(centerWrapper);
 
         graphRenderer.drawGraph();
-        return new Scene(root, 1100, 750);
+        return root;
     }
 
     // =========================================================================

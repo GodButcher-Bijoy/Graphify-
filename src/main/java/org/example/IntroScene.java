@@ -34,7 +34,6 @@ public class IntroScene {
         subScene.heightProperty().bind(root.heightProperty());
 
         // --- 1. Centered Ground (Middle of the screen) ---
-        // 700 / 2 = 350 is the middle
         double groundLevel = 350;
         Rectangle ground = new Rectangle(4000, 1500);
         ground.setTranslateX(-2000);
@@ -47,49 +46,87 @@ public class IntroScene {
         );
         ground.setFill(groundGradient);
 
-        // --- 2. Centered Grid ---
-        Group graphGrid = new Group();
-        graphGrid.setOpacity(0.0);
-        graphGrid.setTranslateZ(-1);
+        // --- 2. 3D Perspective Grid ---
+        int spacing   = 80;
+        int halfW     = 1200;
+        int gridDepth = 1200;
 
-        // Vertical lines
-        for (int i = -2000; i <= 2000; i += 60) {
-            Rectangle vLine = new Rectangle(2, 1500, Color.web("#FFFFFF", 0.15));
-            vLine.setTranslateX(i);
-            vLine.setTranslateY(groundLevel);
-            graphGrid.getChildren().add(vLine);
+        Group floorGrid   = new Group();
+        List<Box> zLines  = new ArrayList<>();
+        List<Box> xLines  = new ArrayList<>();
+
+        // Z-axis lines
+        for (int z = spacing; z <= gridDepth; z += spacing) {
+            boolean isAxis = (z == 0);
+            double opacity = isAxis ? 0.6 : 0.15;
+
+            PhongMaterial mat = new PhongMaterial();
+            mat.setDiffuseColor(Color.web("#FFFFFF", opacity));
+            mat.setSpecularColor(Color.web("#FFFFFF", opacity * 0.5));
+
+            Box line = new Box(halfW * 2, 1.5, 1.5);
+            line.setTranslateY(groundLevel);
+            line.setTranslateZ(z);
+            line.setMaterial(mat);
+            line.setOpacity(0.0);
+            zLines.add(line);
+            floorGrid.getChildren().add(line);
         }
 
-        // Horizontal lines starting from middle and going down
-        for (int i = 0; i <= 1500; i += 60) {
-            Rectangle hLine = new Rectangle(4000, 2, Color.web("#FFFFFF", 0.15));
-            hLine.setTranslateX(-2000);
-            hLine.setTranslateY(groundLevel + i);
-            graphGrid.getChildren().add(hLine);
+        // X-axis lines
+        for (int x = -halfW; x <= halfW; x += spacing) {
+            boolean isAxis = (x == 0);
+            double opacity = isAxis ? 0.6 : 0.15;
+
+            PhongMaterial mat = new PhongMaterial();
+            mat.setDiffuseColor(Color.web("#FFFFFF", opacity));
+            mat.setSpecularColor(Color.web("#FFFFFF", opacity * 0.5));
+
+            Box line = new Box(1.5, 1.5, gridDepth);
+            line.setTranslateY(groundLevel);
+            line.setTranslateX(x);
+            line.setTranslateZ(gridDepth / 2.0);
+            line.setMaterial(mat);
+            line.setOpacity(0.0);
+            xLines.add(line);
+            floorGrid.getChildren().add(line);
         }
+
+        // Glowing horizon baseline
+        PhongMaterial horizonMat = new PhongMaterial(Color.web("#FFFFFF", 0.8));
+        Box horizonBar = new Box(halfW * 2, 3, 3);
+        horizonBar.setTranslateY(groundLevel - 1);
+        horizonBar.setTranslateZ(0);
+        horizonBar.setMaterial(horizonMat);
+        horizonBar.setOpacity(1.0);
+        floorGrid.getChildren().add(horizonBar);
 
         Rectangle floorLine = new Rectangle(4000, 2);
         floorLine.setTranslateX(-2000);
         floorLine.setTranslateY(groundLevel);
         floorLine.setFill(Color.web("#FFFFFF", 0.5));
 
-        // --- 3. Cube Settings (Adjusted for middle) ---
+        // --- 3. Cube Settings (Shifted Upwards) ---
         double cubeSize = 70;
         double startX = -350;
-        double restY = groundLevel - (cubeSize / 2.0);
+
+        // এখানে shiftUp ভ্যালু দিয়ে কিউবটাকে কতটা উপরে তুলবো তা নির্ধারণ করেছি
+        double shiftUp = 100;
+        double restY = groundLevel - shiftUp - (cubeSize / 2.0);
 
         Group cubeGroup = createCustomColoredCube(cubeSize);
         cubeGroup.setTranslateX(startX);
         cubeGroup.setTranslateY(-600);
         cubeGroup.setRotationAxis(Rotate.Z_AXIS);
 
-        // --- 4. Text Setup (Positioned relative to middle) ---
+        // --- 4. Text Setup (Shifted Upwards) ---
         HBox textContainer = new HBox(10);
         textContainer.setAlignment(Pos.CENTER);
         textContainer.setMaxWidth(800);
-        // Positioned slightly above the middle floor
-        textContainer.setTranslateY(groundLevel - 440);
-        textContainer.setTranslateX(50);
+
+        // টেক্সটগুলোকেও shiftUp পরিমাণ উপরে তুলে দেওয়া হয়েছে
+        textContainer.setTranslateY(groundLevel - 440 - shiftUp);
+        textContainer.setTranslateX(0);
 
         List<Label> letters = new ArrayList<>();
         for (char c : APP_NAME.toCharArray()) {
@@ -101,17 +138,25 @@ public class IntroScene {
             textContainer.getChildren().add(l);
         }
 
-        content3D.getChildren().addAll(ground, graphGrid, floorLine, cubeGroup);
-        root.getChildren().addAll(subScene, textContainer);
+        // Blinking "Click to continue" Label
+        Label clickLabel = new Label("Click to continue");
+        clickLabel.setFont(Font.font("Montserrat", FontWeight.NORMAL, 20));
+        clickLabel.setTextFill(Color.web("#FFFFFF", 0.8));
+        clickLabel.setOpacity(0.0);
+        StackPane.setAlignment(clickLabel, Pos.BOTTOM_CENTER);
+        StackPane.setMargin(clickLabel, new javafx.geometry.Insets(0, 0, 100, 0));
 
-        // --- 5. Camera (Higher Y to look at the middle) ---
+        content3D.getChildren().addAll(ground, floorGrid, floorLine, cubeGroup);
+        root.getChildren().addAll(subScene, textContainer, clickLabel);
+
+        // --- 5. Camera ---
         PerspectiveCamera camera = new PerspectiveCamera(true);
         camera.setNearClip(0.1);
         camera.setFarClip(10000);
         camera.setTranslateZ(-1200);
-        camera.setTranslateY(-50); // Adjusted camera height
+        camera.setTranslateY(-50);
         camera.getTransforms().addAll(
-                new Rotate(-10, Rotate.X_AXIS), // Flatter angle to see the grid better
+                new Rotate(-10, Rotate.X_AXIS),
                 new Rotate(0, Rotate.Y_AXIS)
         );
         subScene.setCamera(camera);
@@ -119,7 +164,40 @@ public class IntroScene {
         content3D.getChildren().add(new AmbientLight(Color.web("#FFFFFF", 0.8)));
 
         // --- 6. Animation ---
-        TranslateTransition drop = new TranslateTransition(Duration.seconds(0.8), cubeGroup);
+
+        // 3D Graph Paper Reveal Sequence (প্রথম অ্যানিমেশন)
+        SequentialTransition gridReveal = new SequentialTransition();
+
+        FadeTransition horizonFade = new FadeTransition(Duration.millis(150), horizonBar);
+        horizonFade.setToValue(1.0);
+        gridReveal.getChildren().add(horizonFade);
+
+        ParallelTransition zLineSweep = new ParallelTransition();
+        for (int idx = 0; idx < zLines.size(); idx++) {
+            Box line = zLines.get(idx);
+            FadeTransition ft = new FadeTransition(Duration.millis(150), line);
+            ft.setDelay(Duration.millis(idx * 75));
+            ft.setFromValue(0.0);
+            ft.setToValue(1.0);
+            zLineSweep.getChildren().add(ft);
+        }
+        gridReveal.getChildren().add(zLineSweep);
+
+        ParallelTransition xLineFan = new ParallelTransition();
+        int mid = xLines.size() / 2;
+        for (int i = 0; i < xLines.size(); i++) {
+            int dist  = Math.abs(i - mid);
+            Box line  = xLines.get(i);
+            FadeTransition ft = new FadeTransition(Duration.millis(150), line);
+            ft.setDelay(Duration.millis(dist * 75));
+            ft.setFromValue(0.0);
+            ft.setToValue(1.0);
+            xLineFan.getChildren().add(ft);
+        }
+        gridReveal.getChildren().add(xLineFan);
+
+        // Cube Drop & Roll Sequence (দ্বিতীয় অ্যানিমেশন)
+        TranslateTransition drop = new TranslateTransition(Duration.seconds(.8), cubeGroup);
         drop.setToY(restY);
         drop.setInterpolator(Interpolator.EASE_IN);
 
@@ -131,7 +209,7 @@ public class IntroScene {
         SequentialTransition rollingSequence = new SequentialTransition();
         double currentX = startX;
         double currentAngle = 0;
-        int totalRolls = letters.size() + 15;
+        int totalRolls = letters.size() + 6;
 
         for (int i = 0; i < totalRolls; i++) {
             final double cX = currentX;
@@ -158,7 +236,7 @@ public class IntroScene {
             };
 
             if (i < letters.size()) {
-                FadeTransition reveal = new FadeTransition(Duration.seconds(0.4), letters.get(i));
+                FadeTransition reveal = new FadeTransition(Duration.seconds(0.25), letters.get(i));
                 reveal.setToValue(1.0);
                 ParallelTransition sync = new ParallelTransition(rollStep, reveal);
                 rollingSequence.getChildren().add(sync);
@@ -169,15 +247,28 @@ public class IntroScene {
             currentAngle += 90;
         }
 
-        FadeTransition showGraphPaper = new FadeTransition(Duration.seconds(1.5), graphGrid);
-        showGraphPaper.setToValue(1.0);
-
+        // সিকোয়েন্স চেঞ্জ করা হয়েছে: আগে gridReveal, তারপর drop, bounce ও rollingSequence
         SequentialTransition masterSequence = new SequentialTransition(
-                drop, bounce, new PauseTransition(Duration.seconds(0.2)),
-                rollingSequence, showGraphPaper
+                gridReveal,
+                drop, bounce, new PauseTransition(Duration.seconds(0.1)),
+                rollingSequence
         );
 
-        masterSequence.setOnFinished(e -> { if(onComplete != null) onComplete.run(); });
+        masterSequence.setOnFinished(e -> {
+            // Blink the "Click to continue" text
+            FadeTransition blink = new FadeTransition(Duration.seconds(0.8), clickLabel);
+            blink.setFromValue(0.2);
+            blink.setToValue(1.0);
+            blink.setCycleCount(Animation.INDEFINITE);
+            blink.setAutoReverse(true);
+            blink.play();
+
+            // Setup click listener to proceed
+            root.setOnMouseClicked(event -> {
+                if(onComplete != null) onComplete.run();
+            });
+        });
+
         masterSequence.play();
 
         return new Scene(root, 1000, 700, true);

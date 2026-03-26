@@ -30,7 +30,7 @@ public class CollegeEquations extends EquationCategory {
     @Override
     public List<EquationPreset> getPresets() {
         return Arrays.asList(
-                ndc(), hcc(), vnc(), mit(), iit(), buet(), du()
+                ndc(), hcc(), vnc(), DCC(), DC()
         );
     }
 
@@ -108,86 +108,32 @@ public class CollegeEquations extends EquationCategory {
         );
     }
 
-    // =========================================================================
-    // MIT — Cardinal Red (MIT's actual color #A31F34)
-    // =========================================================================
-    private EquationPreset mit() {
+    private EquationPreset DCC() {
         return new EquationPreset(
-                "MIT", "MIT drawn with line-segment equations", 35.0,
-                // --- M ---
-                EquationEntry.of("x=-9{-1.5<=y<=1.5}",            "#A31F34"),
-                EquationEntry.of("y=-1.5*x-12{-9<=x<=-8}",        "#A31F34"),
-                EquationEntry.of("y=1.5*x+12{-8<=x<=-7}",         "#A31F34"),
-                EquationEntry.of("x=-7{-1.5<=y<=1.5}",            "#A31F34"),
-                // --- I ---
-                EquationEntry.of("x=0{-1.5<=y<=1.5}",             "#C0392B"),
-                EquationEntry.of("y=1.5{-0.5<=x<=0.5}",           "#C0392B"),
-                EquationEntry.of("y=-1.5{-0.5<=x<=0.5}",          "#C0392B"),
-                // --- T ---
-                EquationEntry.of("y=1.5{5<=x<=9}",                "#E74C3C"),
-                EquationEntry.of("x=7{-1.5<=y<=1.5}",             "#E74C3C")
+                "DCC", "DCC drawn with line-segment equations", 55.0,
+                EquationEntry.of("x^2 = -4*0.5(y-2.4){y>=.9}",            "#000000"),
+                EquationEntry.of("x^2/4+y^2/3=1{y<=.9}",        "#000000"),
+                EquationEntry.of("y+4.7 <= -8(x+.4)^2 + 8{-.79<=x<=-.13, x^2 >= -4*0.5(y-2.4)}","#ff0000"),
+                EquationEntry.of("y+6.9 <= -7.33*(x-0.1)^2 + 10{-.13<=x<=.4, x^2 >= -4*0.5(y-2.4)} ","#ff0000"),
+                EquationEntry.of("y+6.4 <= -11.67*(x-.6)^2 + 9.27 {.4<=x<=.87,x^2 >= -4*0.5(y-2.4)}","#ff0000"),
+                EquationEntry.of("y <= .5 - x^2{y>=.16}",           "#ff8d03"),
+                EquationEntry.of("y >= 2abs(x) - 1 {y<=.16,}",          "#ff8d03"),
+                EquationEntry.of("(x-1)^2+(y-1)^2 <= .05",                "#000000"),
+                EquationEntry.of("(x+1)^2+(y-1)^2 <= .05",                "#000000"),
+                EquationEntry.of("y = .5 - x^2{y>=.16}",             "#000000"),
+                EquationEntry.of("y = 2abs(x) - 1 {y<=.16,}",             "#000000")
         );
     }
 
-    // =========================================================================
-    // IIT — Deep Blue (IIT blue #003366)
-    // =========================================================================
-    private EquationPreset iit() {
+
+    private EquationPreset DC() {
         return new EquationPreset(
-                "IIT", "IIT drawn with line-segment equations", 35.0,
+                "DC", "DC drawn with line-segment equations", 65.0,
                 // --- I1 ---
-                EquationEntry.of("x=-7{-1.5<=y<=1.5}",            "#003366"),
-                EquationEntry.of("y=1.5{-7.5<=x<=-6.5}",          "#003366"),
-                EquationEntry.of("y=-1.5{-7.5<=x<=-6.5}",         "#003366"),
-                // --- I2 ---
-                EquationEntry.of("x=0{-1.5<=y<=1.5}",             "#1A5276"),
-                EquationEntry.of("y=1.5{-0.5<=x<=0.5}",           "#1A5276"),
-                EquationEntry.of("y=-1.5{-0.5<=x<=0.5}",          "#1A5276"),
-                // --- T ---
-                EquationEntry.of("y=1.5{5<=x<=9}",                "#2E86C1"),
-                EquationEntry.of("x=7{-1.5<=y<=1.5}",             "#2E86C1")
+                EquationEntry.of("((x+y)/sqrt(2))^2 <= (0.2 + 0.4/(1 + exp(-1.5*(x-y)/sqrt(2))))^2 {-7 <= (x-y)/sqrt(2) <= 5}","#d67302"),
+                EquationEntry.of("(((x-y)/sqrt(2)-5)/0.4)^2 + (((x+y)/sqrt(2))/0.6)^2 <= 1 {(x-y)/sqrt(2) >= 5}","#d67302"),
+                EquationEntry.of("(((x-y)/sqrt(2)+7.2)/0.2)^2 + (((x+y)/sqrt(2))/0.35)^2 <= 1","#3b3631")
         );
     }
 
-    // =========================================================================
-    // BUET — Engineering Blue-Green (#00695C)
-    // =========================================================================
-    private EquationPreset buet() {
-        return new EquationPreset(
-                "BUET", "BUET drawn with equations", 28.0,
-                // --- B ---
-                EquationEntry.of("x=-11{-1.5<=y<=1.5}",                          "#00695C"),
-                EquationEntry.of("(x+11)^2+(y-0.75)^2=0.5625{x>=-11,y>=0}",     "#00695C"),
-                EquationEntry.of("(x+11)^2+(y+0.75)^2=0.5625{x>=-11,y<=0}",     "#00695C"),
-                EquationEntry.of("y=0{-11<=x<=-10.25}",                           "#00695C"),
-                // --- U ---
-                EquationEntry.of("x=-5{0<=y<=1.5}",                               "#00897B"),
-                EquationEntry.of("x=-3{0<=y<=1.5}",                               "#00897B"),
-                EquationEntry.of("(x+4)^2+y^2=1{y<=0}",                           "#00897B"),
-                // --- E ---
-                EquationEntry.of("x=1{-1.5<=y<=1.5}",                             "#26A69A"),
-                EquationEntry.of("y=1.5{1<=x<=3}",                                "#26A69A"),
-                EquationEntry.of("y=0{1<=x<=2.5}",                                "#26A69A"),
-                EquationEntry.of("y=-1.5{1<=x<=3}",                               "#26A69A"),
-                // --- T ---
-                EquationEntry.of("y=1.5{5<=x<=9}",                                "#4DB6AC"),
-                EquationEntry.of("x=7{-1.5<=y<=1.5}",                             "#4DB6AC")
-        );
-    }
-
-    // =========================================================================
-    // DU — Dhaka University Green (#006400) and Gold (#DAA520)
-    // =========================================================================
-    private EquationPreset du() {
-        return new EquationPreset(
-                "DU", "DU (Dhaka University) drawn with equations", 50.0,
-                // --- D ---
-                EquationEntry.of("x=-3{-1.5<=y<=1.5}",            "#006400"),  // bar (green)
-                EquationEntry.of("(x+3)^2+y^2=2.25{x>=-3}",       "#006400"),  // arc (green)
-                // --- U ---
-                EquationEntry.of("x=3{0<=y<=1.5}",                "#DAA520"),  // left bar (gold)
-                EquationEntry.of("x=5{0<=y<=1.5}",                "#DAA520"),  // right bar (gold)
-                EquationEntry.of("(x-4)^2+y^2=1{y<=0}",           "#DAA520")   // bottom arc (gold)
-        );
-    }
 }
