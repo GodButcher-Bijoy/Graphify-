@@ -35,8 +35,21 @@ public class NatureEquations extends EquationCategory {
     // 5-petal rose  r = cos(5θ)
     private EquationPreset roseCurve() {
         return new EquationPreset(
-                "Rose Curve 🌹", "5-petal rose curve: r = cos(5θ)", 90.0,
-                EquationEntry.of("(cos(5*t)*cos(t),cos(5*t)*sin(t))", "#E8093A")  // deep rose red
+                "Tulip", "tulip curve", 20.0,
+                EquationEntry.of("y=6/25(x-8)^2+7{3<= x<=13}", "#fc0b03"),
+                EquationEntry.of("y<=(-3/4)(x-8)^2+15{6<= x<=10,y>=6/25(x-8)^2+7}", "#fc0b03"),
+                EquationEntry.of("y<=(-1/9)(x-3)^2+13{3<=x<=6,y>=6/25(x-8)^2+7}", "#fc0b03"),
+                EquationEntry.of("y<=(-1/9)(x-13)^2+13{10<=x<=13,y>=6/25(x-8)^2+7}", "#fc0b03"),
+                EquationEntry.of("y<=(-1/4)(x-11)^2+15{9.098<=x<=11,y>=(-3/4)(x-8)^2+15,y>=(-1/9)(x-13)^2+13}", "#fc0b03"),
+                EquationEntry.of("y<=(-3)(x-11)^2+15{11<=x<=11.846,y>=(-1/9)(x-13)^2+13}", "#fc0b03"),
+                EquationEntry.of("y<=(-3)(x-5)^2+15{4.154<=x<=5,y>=(-3/4)(x-8)^2+15,y>=(-1/9)(x-3)^2+13}", "#fc0b03"),
+                EquationEntry.of("y<=(-1/4)(x-5)^2+15{5<=x<=6.902,y>=(-3/4)(x-8)^2+15,y>=(-1/9)(x-3)^2+13}", "#fc0b03"),
+                EquationEntry.of("x=8{0<= y<=7}", "#03fc14"),
+                EquationEntry.of("y<=(-7/36)(x-2)^2+7{2<=x<=8,0<=y>=(-7/9)(x-2)^2+7}", "#03fc14"),
+                EquationEntry.of("y=(-7/9)(x-2)^2+7{2<=x<=5}", "#03fc14"),
+                EquationEntry.of("y<=(-5/16)(x-12)^2+5{8<=x<=12,0<=y>=(-5/4)(x-12)^2+5}", "#03fc14"),
+                EquationEntry.of("y=(-5/4)(x-12)^2+5{10<=x<=12}", "#03fc14")
+                // deep rose red
         );
     }
 
