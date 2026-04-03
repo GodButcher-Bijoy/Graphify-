@@ -33,7 +33,8 @@ public class UIManager {
     public VBox getFunctionContainer() {
         return functionContainer;
     }
-    public HBox createSidebar(Button libraryBtn) {
+    // Parameter e backBtn ar libraryBtn add kora holo
+    public HBox createSidebar(Button backBtn, Button libraryBtn) {
         VBox sidebar = new VBox(15);
         sidebar.setPadding(new Insets(30, 20, 30, 20));
         sidebar.setPrefWidth(400);
@@ -47,9 +48,9 @@ public class UIManager {
         sidebarGlow.setColor(Color.web("#9D00FF", 0.5));
         sidebar.setEffect(sidebarGlow);
 
-        // --- Shudhu Library button sidebar e thakbe ---
-        HBox topButtons = new HBox(libraryBtn);
-        topButtons.setAlignment(Pos.CENTER);
+        // --- Home (Back) ebang Library button ke pasapasi rakha holo ---
+        HBox topButtons = new HBox(15, backBtn, libraryBtn); // 15 hocche spacing
+        topButtons.setAlignment(Pos.CENTER_LEFT); // Bam pashe align korlam
         VBox.setMargin(topButtons, new Insets(0, 0, 10, 0));
 
         Label inputLabel = new Label(" ");
@@ -74,7 +75,7 @@ public class UIManager {
         scrollPane.getStylesheets().add(b64Css);
 
         VBox floatingBoxContainer = new VBox(scrollPane);
-        floatingBoxContainer.setStyle("-fx-background-color: #1A1A1A; -fx-border-color: #00FFFF; -fx-border-width: 4px; -fx-border-radius: 12px; -fx-background-radius: 20px;");
+        floatingBoxContainer.setStyle("-fx-background-color: #1A1A1A; -fx-border-color: #00FFFF; -fx-border-width: 2px; -fx-border-radius: 12px; -fx-background-radius: 12px;");
         floatingBoxContainer.setPadding(new Insets(15, 0, 15, 0));
 
         javafx.scene.effect.DropShadow containerShadow = new javafx.scene.effect.DropShadow();
@@ -85,7 +86,7 @@ public class UIManager {
 
         VBox.setVgrow(floatingBoxContainer, Priority.ALWAYS);
 
-        // Top button sidebar er children e add kora holo
+        // topButtons sidebar er baccha hishebe add kora holo
         sidebar.getChildren().addAll(topButtons, inputLabel, floatingBoxContainer);
 
         Pane slideContainer = new Pane(sidebar);
@@ -112,7 +113,6 @@ public class UIManager {
         toggleBtn.setOnMouseEntered(e -> {
             toggleBtn.setStyle(hoverStyle);
             ((SVGPath)toggleBtn.getGraphic()).setFill(Color.WHITE);
-
             javafx.animation.ScaleTransition st = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(150), toggleBtn);
             st.setToX(0.85); st.setToY(0.85);
             st.play();
@@ -122,7 +122,6 @@ public class UIManager {
                 toggleBtn.setStyle(baseStyle);
                 ((SVGPath)toggleBtn.getGraphic()).setFill(Color.web("#AAAAAA"));
             }
-
             javafx.animation.ScaleTransition st = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(150), toggleBtn);
             st.setToX(1.0); st.setToY(1.0);
             st.play();

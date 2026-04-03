@@ -52,27 +52,10 @@ public class MainApp1 extends Application {
         // Create your existing Main UI and pass the preset to load it
         BorderPane mainRoot = createMainUI(presetToLoad);
 
-        // Clean, floating arrow back button (Matching LibraryScene)
-        Button backBtn = new Button("\uD83C\uDFE0");
-        String normalStyle = "-fx-font-size: 30px; -fx-background-color: transparent; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 0 10 0 10;";
-        String hoverStyle = "-fx-font-size: 30px; -fx-background-color: #222222; -fx-text-fill: #9D00FF; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 0 10 0 10;";
-
-        backBtn.setStyle(normalStyle);
-        backBtn.setOnAction(e -> showSelectionScreen());
-
-        // 🟢 THESE TWO LINES WERE MISSING! They trigger the hover effect.
-        backBtn.setOnMouseEntered(e -> backBtn.setStyle(hoverStyle));
-        backBtn.setOnMouseExited(e -> backBtn.setStyle(normalStyle));
-
-        // Overlay the back button on top of your main UI using StackPane
-        StackPane wrapper = new StackPane(mainRoot);
-        StackPane.setAlignment(backBtn, Pos.TOP_LEFT);
-        StackPane.setMargin(backBtn, new Insets(10, 15, 15, 15)); // Adjusted slightly for the larger font
-        wrapper.getChildren().add(backBtn);
-
-        // Swap the scene root
-        mainStage.getScene().setRoot(wrapper);
+        // Swap the scene root directly (No wrapper needed anymore as backBtn is in sidebar)
+        mainStage.getScene().setRoot(mainRoot);
     }
+
     private BorderPane createMainUI(EquationPreset presetToLoad) {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: #333333;");
@@ -105,6 +88,16 @@ public class MainApp1 extends Application {
         focusBtn.setStyle(normalFocusStyle);
         focusBtn.setOnMouseEntered(e -> focusBtn.setStyle(hoverFocusStyle));
         focusBtn.setOnMouseExited(e -> focusBtn.setStyle(normalFocusStyle));
+
+        // ── ⌂ Home (Back) button (Now sticking to Sidebar) ──────────────────────
+        Button backBtn = new Button("⌂");
+        String normalStyle = "-fx-font-size: 30px; -fx-background-color: transparent; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 0 10 0 10;";
+        String hoverStyle = "-fx-font-size: 30px; -fx-background-color: #222222; -fx-text-fill: #9D00FF; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 0 10 0 10;";
+
+        backBtn.setStyle(normalStyle);
+        backBtn.setOnAction(e -> showSelectionScreen());
+        backBtn.setOnMouseEntered(e -> backBtn.setStyle(hoverStyle));
+        backBtn.setOnMouseExited(e -> backBtn.setStyle(normalStyle));
 
         // ── Library button (Will stick to Sidebar) ──────────────────────
         Button libraryBtn = new Button("📚 Library ▾");
@@ -146,8 +139,8 @@ public class MainApp1 extends Application {
             graphRenderer.drawGraph();
         });
 
-        // Sidebar e shudhu libraryBtn pathano hocche
-        root.setLeft(uiManager.createSidebar(libraryBtn));
+        // Sidebar e backBtn ebong libraryBtn pass kora hocche
+        root.setLeft(uiManager.createSidebar(backBtn, libraryBtn));
         root.setCenter(centerWrapper);
 
         if (presetToLoad != null) {
@@ -157,6 +150,7 @@ public class MainApp1 extends Application {
         graphRenderer.drawGraph();
         return root;
     }
+
     // =========================================================================
     // Build the nested ContextMenu from EquationLibrary
     // =========================================================================

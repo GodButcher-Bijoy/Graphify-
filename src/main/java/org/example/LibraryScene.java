@@ -18,7 +18,7 @@ public class LibraryScene {
 
         // --- Top: Back Button ---
         // Just the arrow, made much larger with transparent background
-        Button backBtn = new Button("\uD83C\uDFE0\uFE0E");
+        Button backBtn = new Button("⌂");
         String normalStyle = "-fx-font-size: 30px; -fx-background-color: transparent; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 0 10 0 10;";
         String hoverStyle = "-fx-font-size: 30px; -fx-background-color: #222222; -fx-text-fill: #9D00FF; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 0 10 0 10;";
 
