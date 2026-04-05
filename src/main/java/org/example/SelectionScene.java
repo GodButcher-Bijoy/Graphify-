@@ -5,11 +5,11 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.*;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.*;
 import javafx.scene.paint.*;
 import javafx.scene.shape.Box;
-import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
 import javafx.util.Duration;
@@ -21,43 +21,44 @@ public class SelectionScene {
 
     public static Parent createView(Runnable onStandard, Runnable onPolar, Runnable onLibrary) {
         StackPane root = new StackPane();
-        root.setStyle("-fx-background-color: #050505;"); // Base pitch black
+        root.setStyle("-fx-background-color: #050505;");
 
         // =========================================================
         // 1. TRUE 3D LAYER: Grid & Popping Cubes
         // =========================================================
         Group group3D = new Group();
 
-        // Add Ambient Light so the 3D materials are visible
         AmbientLight light = new AmbientLight(Color.WHITE);
         group3D.getChildren().add(light);
 
-        // --- Build the 3D Floor Grid ---
-        Group grid = new Group();
+        // --- Build the 3D Floor Grid using Box objects ---
+        // Line nodes are 2D primitives — they vanish when viewed edge-on
+        // from a perspective camera. Thin Box shapes are proper 3D and
+        // always render regardless of viewing angle.
         double gridSize = 6000;
-        double step = 150; // Distance between grid lines
+        double step     = 150;
+        double lineW    = 2.5;  // visible width of each grid line
+        double lineH    = 1.5;  // flat height sitting on the floor plane
+
+        PhongMaterial gridMat = new PhongMaterial(Color.web("#AAAAAA", 0.9));
 
         for (double i = -gridSize / 2; i <= gridSize / 2; i += step) {
-            // Horizontal lines
-            Line hLine = new Line(-gridSize / 2, i, gridSize / 2, i);
-            hLine.setStroke(Color.web("#AAAAAA", 0.9));
-            hLine.setStrokeWidth(3.5);
+            // Horizontal line — runs along X axis, positioned at Z = i
+            Box hLine = new Box(gridSize, lineH, lineW);
+            hLine.setTranslateZ(i);
+            hLine.setMaterial(gridMat);
 
-            // Vertical lines
-            Line vLine = new Line(i, -gridSize / 2, i, gridSize / 2);
-            vLine.setStroke(Color.web("#AAAAAA", 0.9));
-            vLine.setStrokeWidth(3.5);
+            // Vertical line — runs along Z axis, positioned at X = i
+            Box vLine = new Box(lineW, lineH, gridSize);
+            vLine.setTranslateX(i);
+            vLine.setTranslateY(lineH); // offset below hLines to prevent z-fighting at intersections
+            vLine.setMaterial(gridMat);
 
-            grid.getChildren().addAll(hLine, vLine);
+            group3D.getChildren().addAll(hLine, vLine);
         }
 
-        // Rotate the 2D lines 90 degrees on the X-axis so they lie flat like a floor
-        grid.setRotationAxis(Rotate.X_AXIS);
-        grid.setRotate(90);
-        group3D.getChildren().add(grid);
-
         // --- Build the 3D Popping Cubes Pool ---
-        double cubeSize = step - 20; // 130px — matches grid cell width
+        double cubeSize = step - 20;
         List<Group> cubePool = new ArrayList<>();
         Color[] neonColors = {
                 Color.web("#00FFFF"),
@@ -84,7 +85,6 @@ public class SelectionScene {
 
             availableCube.getProperties().put("available", false);
 
-            // Snap to grid CELL center (+step/2 offset aligns with cell interior, not grid line)
             double x = Math.floor((Math.random() * gridSize - gridSize / 2) / step) * step + step / 2;
             double z = Math.floor((Math.random() * gridSize - gridSize / 2) / step) * step + step / 2;
             availableCube.setTranslateX(x);
@@ -140,62 +140,90 @@ public class SelectionScene {
 
         // --- Setup the 3D SubScene & Camera ---
         SubScene subScene3D = new SubScene(group3D, 1920, 1080, true, SceneAntialiasing.BALANCED);
-        subScene3D.setFill(Color.TRANSPARENT); // Let the StackPane's black background show through
+        subScene3D.setFill(Color.TRANSPARENT);
         subScene3D.widthProperty().bind(root.widthProperty());
         subScene3D.heightProperty().bind(root.heightProperty());
 
         PerspectiveCamera camera = new PerspectiveCamera(true);
-        // CRITICAL FIX: The default farClip is 100. We pulled the camera back to -2000.
-        // Setting farClip to 15000 ensures the 6000px grid is actually rendered!
         camera.setNearClip(0.1);
         camera.setFarClip(15000);
-
-        camera.setTranslateZ(-2500); // Pull camera back
-        camera.setTranslateY(-800);  // Lift camera up into the air
+        camera.setTranslateZ(-2500);
+        camera.setTranslateY(-800);
         camera.setRotationAxis(Rotate.X_AXIS);
-        camera.setRotate(-20);       // Tilt camera down to look at the grid
+        camera.setRotate(-20);
         subScene3D.setCamera(camera);
 
         // =========================================================
-        // 2. VIGNETTE OVERLAY: Fade the grid out towards the edges
+        // 2. VIGNETTE OVERLAY
         // =========================================================
         Rectangle edgeFade = new Rectangle();
         edgeFade.widthProperty().bind(root.widthProperty());
         edgeFade.heightProperty().bind(root.heightProperty());
-        edgeFade.setMouseTransparent(true); // Don't block clicks
+        edgeFade.setMouseTransparent(true);
 
         RadialGradient fadeGradient = new RadialGradient(
                 0, 0, 0.5, 0.5, 0.7, true, CycleMethod.NO_CYCLE,
-                new Stop(0, Color.TRANSPARENT),        // Clear in the middle
-                new Stop(1, Color.web("#050505", 1.0)) // Solid black at edges
+                new Stop(0, Color.TRANSPARENT),
+                new Stop(1, Color.web("#050505", 1.0))
         );
         edgeFade.setFill(fadeGradient);
 
         // =========================================================
-        // 3. UI LAYER: Floating Buttons on the Right
+        // 3. UI LAYER
         // =========================================================
         VBox buttonsBox = new VBox(40);
         buttonsBox.setAlignment(Pos.CENTER_RIGHT);
         buttonsBox.setPadding(new Insets(0, 100, 0, 0));
-        buttonsBox.setPickOnBounds(false); // Let empty space pass clicks down if needed
+        buttonsBox.setPickOnBounds(false);
 
         Button btnStandard = new Button("STANDARD");
-        Button btnPolar = new Button("POLAR");
-        Button btnLibrary = new Button("CURVES LIBRARY");
+        Button btnPolar    = new Button("POLAR");
+        Button btnLibrary  = new Button("CURVES LIBRARY");
 
         setupFloatingButton(btnStandard, "#00FFFF", onStandard);
-        setupFloatingButton(btnPolar, "#FF003C", onPolar);
-        setupFloatingButton(btnLibrary, "#B026FF", onLibrary);
+        setupFloatingButton(btnPolar,    "#FF003C", onPolar);
+        setupFloatingButton(btnLibrary,  "#B026FF", onLibrary);
 
         buttonsBox.getChildren().addAll(btnStandard, btnPolar, btnLibrary);
 
+        // --- LEFT SIDE: Vertical Monolithic Slogan ---
+        VBox leftBox = new VBox(-15);
+        leftBox.setAlignment(Pos.CENTER_LEFT);
+        leftBox.setPadding(new Insets(0, 0, 0, 100));
+        leftBox.setPickOnBounds(false);
+
+        String fontName = "Arial Black";
+
+        String baseTextStyle = "-fx-font-family: '" + fontName + "'; " +
+                "-fx-font-size: 95px; " +
+                "-fx-font-weight: bold; " +
+                "-fx-text-fill: #FFFFFF; " +
+                "-fx-effect: dropshadow(gaussian, rgba(255,255,255,0.2), 15, 0.4, 0, 0);";
+
+        Label word1 = new Label("SHAPE");
+        Label word2 = new Label("YOUR");
+        Label word3 = new Label("CURIOSITY");
+
+        word1.setStyle(baseTextStyle);
+        word2.setStyle(baseTextStyle);
+        word3.setStyle(baseTextStyle.replace("#FFFFFF", "#00FFFF"));
+
+        // Floating animation on CURIOSITY
+        TranslateTransition floatAnim = new TranslateTransition(Duration.millis(2000), word3);
+        floatAnim.setByY(-12);
+        floatAnim.setAutoReverse(true);
+        floatAnim.setCycleCount(Animation.INDEFINITE);
+        floatAnim.setInterpolator(Interpolator.EASE_BOTH);
+        floatAnim.play();
+
+        leftBox.getChildren().addAll(word1, word2, word3);
+
         BorderPane uiLayer = new BorderPane();
         uiLayer.setRight(buttonsBox);
+        uiLayer.setLeft(leftBox);
         uiLayer.setPickOnBounds(false);
 
-        // Stack the layers: 1. 3D Scene -> 2. Edge Fade -> 3. UI Buttons
         root.getChildren().addAll(subScene3D, edgeFade, uiLayer);
-
         return root;
     }
 
@@ -220,14 +248,12 @@ public class SelectionScene {
         btn.setStyle(baseStyle);
         btn.setPrefWidth(260);
 
-        // Neon Glow
         DropShadow glow = new DropShadow();
         glow.setColor(Color.web(neonHex, 0.4));
         glow.setRadius(15);
         glow.setSpread(0.1);
         btn.setEffect(glow);
 
-        // Floating Animation
         TranslateTransition bob = new TranslateTransition(Duration.millis(1200 + Math.random() * 600), btn);
         bob.setByY(8);
         bob.setAutoReverse(true);
@@ -235,7 +261,6 @@ public class SelectionScene {
         bob.setInterpolator(Interpolator.EASE_BOTH);
         bob.play();
 
-        // Sinking Effect (Click)
         ScaleTransition sink = new ScaleTransition(Duration.millis(100), btn);
         sink.setToX(0.85);
         sink.setToY(0.85);
@@ -254,10 +279,9 @@ public class SelectionScene {
             rise.playFromStart();
             btn.setStyle(baseStyle);
             glow.setRadius(15);
-            if(action != null) action.run();
+            if (action != null) action.run();
         });
 
-        // Hover Effect
         btn.setOnMouseEntered(e -> {
             glow.setRadius(25);
             glow.setColor(Color.web(neonHex, 0.7));
@@ -268,18 +292,17 @@ public class SelectionScene {
             glow.setColor(Color.web(neonHex, 0.4));
         });
     }
+
     private static Group createWireframeCube(double size, PhongMaterial edgeMat) {
         Group cube = new Group();
-        double t = 4;   // edge thickness
+        double t  = 4;
         double hs = size / 2;
 
-        // Black fill so faces match background
         PhongMaterial blackMat = new PhongMaterial(Color.web("#050505"));
         Box fill = new Box(size - t * 2, size, size - t * 2);
         fill.setMaterial(blackMat);
         cube.getChildren().add(fill);
 
-        // 4 vertical edges (corners)
         for (int dx : new int[]{-1, 1}) {
             for (int dz : new int[]{-1, 1}) {
                 Box e = new Box(t, size, t);
@@ -290,13 +313,11 @@ public class SelectionScene {
             }
         }
 
-        // Top ring  (y = -hs)
         Box tx1 = new Box(size, t, t); tx1.setTranslateY(-hs + t/2); tx1.setTranslateZ(-hs + t/2); tx1.setMaterial(edgeMat);
         Box tx2 = new Box(size, t, t); tx2.setTranslateY(-hs + t/2); tx2.setTranslateZ( hs - t/2); tx2.setMaterial(edgeMat);
         Box tz1 = new Box(t, t, size); tz1.setTranslateY(-hs + t/2); tz1.setTranslateX(-hs + t/2); tz1.setMaterial(edgeMat);
         Box tz2 = new Box(t, t, size); tz2.setTranslateY(-hs + t/2); tz2.setTranslateX( hs - t/2); tz2.setMaterial(edgeMat);
 
-        // Bottom ring  (y = +hs)
         Box bx1 = new Box(size, t, t); bx1.setTranslateY( hs - t/2); bx1.setTranslateZ(-hs + t/2); bx1.setMaterial(edgeMat);
         Box bx2 = new Box(size, t, t); bx2.setTranslateY( hs - t/2); bx2.setTranslateZ( hs - t/2); bx2.setMaterial(edgeMat);
         Box bz1 = new Box(t, t, size); bz1.setTranslateY( hs - t/2); bz1.setTranslateX(-hs + t/2); bz1.setMaterial(edgeMat);
