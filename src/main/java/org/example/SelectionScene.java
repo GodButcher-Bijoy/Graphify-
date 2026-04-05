@@ -177,9 +177,9 @@ public class SelectionScene {
         buttonsBox.setPadding(new Insets(0, 100, 0, 0));
         buttonsBox.setPickOnBounds(false);
 
-        Button btnStandard = new Button("STANDARD");
+        Button btnStandard = new Button("CARTESIAN");
         Button btnPolar    = new Button("POLAR");
-        Button btnLibrary  = new Button("CURVES LIBRARY");
+        Button btnLibrary  = new Button("EXPERIENCE CURVES");
 
         setupFloatingButton(btnStandard, "#00FFFF", onStandard);
         setupFloatingButton(btnPolar,    "#FF003C", onPolar);
