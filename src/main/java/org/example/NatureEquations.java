@@ -23,19 +23,17 @@ public class NatureEquations extends EquationCategory {
     @Override
     public List<EquationPreset> getPresets() {
         return Arrays.asList(
-                roseCurve(),
+                Tulip(),
                 Volcano(),
-                fourLeafClover(),
-                nautilus(),
+                Drawing(),
                 sunflower(),
-                limaçon()
+                kawaiiCloud()
         );
     }
 
-    // 5-petal rose  r = cos(5θ)
-    private EquationPreset roseCurve() {
+    private EquationPreset Tulip() {
         return new EquationPreset(
-                "Tulip", "tulip curve", 20.0,
+                "Tulip \uD83C\uDF37", "tulip curve", 20.0,
                 EquationEntry.of("y=6/25(x-8)^2+7{3<= x<=13}", "#fc0b03"),
                 EquationEntry.of("y<=(-3/4)(x-8)^2+15{6<= x<=10,y>=6/25(x-8)^2+7}", "#fc0b03"),
                 EquationEntry.of("y<=(-1/9)(x-3)^2+13{3<=x<=6,y>=6/25(x-8)^2+7}", "#fc0b03"),
@@ -49,14 +47,13 @@ public class NatureEquations extends EquationCategory {
                 EquationEntry.of("y=(-7/9)(x-2)^2+7{2<=x<=5}", "#03fc14"),
                 EquationEntry.of("y<=(-5/16)(x-12)^2+5{8<=x<=12,0<=y>=(-5/4)(x-12)^2+5}", "#03fc14"),
                 EquationEntry.of("y=(-5/4)(x-12)^2+5{10<=x<=12}", "#03fc14")
-                // deep rose red
         );
     }
 
 
     private EquationPreset Volcano() {
         return new EquationPreset(
-                "Volcano ", "Volcano", 13.0,
+                "Volcano \uD83C\uDF0B", "Volcano", 13.0,
                 EquationEntry.of("y=.2*(x-24)^2+2{16<x<24}", "#000000"),
                 EquationEntry.of("y=.2*(x+2)²+2{-2<x<6}", "#000000"),
                 EquationEntry.of("y=-.4*√(169-(x-11)²)+.5*sin(x)+2.5", "#000000"),
@@ -74,19 +71,19 @@ public class NatureEquations extends EquationCategory {
         );
     }
 
-    // Four-leaf clover  r = cos(2θ)
-    private EquationPreset fourLeafClover() {
+    private EquationPreset Drawing() {
         return new EquationPreset(
-                "Four-Leaf Clover 🍀", "4-petal rose: r = cos(2θ)", 90.0,
-                EquationEntry.of("(cos(2*t)*cos(t),cos(2*t)*sin(t))", "#2E8B57")  // sea green
-        );
-    }
-
-    // Nautilus / logarithmic spiral  r = e^(0.2θ)
-    private EquationPreset nautilus() {
-        return new EquationPreset(
-                "Nautilus Spiral 🐚", "Logarithmic spiral r = e^(0.2θ)", 20.0,
-                EquationEntry.of("(exp(0.2*t)*cos(t),exp(0.2*t)*sin(t))", "#4682B4")  // ocean blue
+                "Drawing Scenary \uD83C\uDFDE\uFE0F", "Logarithmic spiral r = e^(0.2θ)", 5.0,
+                EquationEntry.of("40>y>-40{40>x>-40}", "#ff0000"),
+                EquationEntry.of("40>y>-40{40>x>-40}", "#fc8403"),
+                EquationEntry.of("y<-20*cos(0.09*x+.1)-6{-40<x<40,y>-40}", "#ff0000"),
+                EquationEntry.of("y<-1.9*cos(0.1*x+5.1)-6{-40<x<40,y>-40}", "#178527"),
+                EquationEntry.of("y<-1.9*cos(0.1*x+5.1)-6{-40<x<40,y>-40}", "#15a129"),
+                EquationEntry.of("(x+17)²+(y-25)²<36", "#ff0000"),
+                EquationEntry.of("(x+17)²+(y-25)²<36", "#fc8403"),
+                EquationEntry.of("x>3*y+10{-40<x<40,-40<y<-1.9*cos(0.1*x+5.1)-6}", "#0acad1"),
+                EquationEntry.of("x<2.5*y+40{x>-40,-40<y<-1.9*cos(0.1*x+5.1)-6}", "#0000ff"),
+                EquationEntry.of("y<-1.9*cos(0.1*x+5.1)-6{-40<x<40,y>-40}", "#115c1c")
         );
     }
 
@@ -103,11 +100,18 @@ public class NatureEquations extends EquationCategory {
         );
     }
 
-    // Limaçon with inner loop  r = 1 + 2cos(θ)
-    private EquationPreset limaçon() {
+    private EquationPreset kawaiiCloud() {
         return new EquationPreset(
-                "Limaçon 🐌", "Limaçon with inner loop: r = 1 + 2cos(θ)", 70.0,
-                EquationEntry.of("((1+2*cos(t))*cos(t),(1+2*cos(t))*sin(t))", "#FF7F50")  // coral
+                "Kawaii Cloud ☁", "Cute kawaii smiling cloud with blue tummy", 45.0,
+
+                EquationEntry.of("x² +(y-1.5)² = 9.6{y≥2.97}", "#FF69B4"),
+                EquationEntry.of("(x+3.5)² + (y- 0.5)² = 6.7{0≤y,x≤-2.73}", "#FF69B4"),
+                EquationEntry.of("(x+3.5)² + (y- 0.5)² = 6.7{0≥y,x≤-2.94}", "#FF69B4"),
+                EquationEntry.of("(x-3.5)² + (y- 0.5)² =6.7{0≤y,x≥2.73}", "#FF69B4"),
+                EquationEntry.of("(x-3.5)² + (y- 0.5)² = 6.7{0≥y,x≥2.94}", "#FF69B4"),
+                EquationEntry.of("(x+1.5)² + (y+0.5)² = 4.4{-2.94≤x≤0,y≤0}", "#FF69B4"),
+                EquationEntry.of("(x-1.5)² + (y+0.5)² = 4.4{y≤-1.97}", "#FF69B4")
+
         );
     }
 }

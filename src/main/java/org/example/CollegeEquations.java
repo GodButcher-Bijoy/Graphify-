@@ -39,7 +39,7 @@ public class CollegeEquations extends EquationCategory {
     // =========================================================================
     private EquationPreset ndc() {
         return new EquationPreset(
-                "NDC", "NDC college sign drawn with equations", 35.0,
+                "NDC \uD83D\uDC51", "NDC college sign drawn with equations", 35.0,
                 // --- N ---
                 EquationEntry.of("y = 0 {-3 <= x <= 3}",            "#fca90f"),
                 EquationEntry.of("y = 0.5 {-3 <= x <= 3}",      "#fca90f"),
@@ -68,7 +68,7 @@ public class CollegeEquations extends EquationCategory {
     // =========================================================================
     private EquationPreset hcc() {
         return new EquationPreset(
-                "HCC", "HCC college sign drawn with equations", 55.0,
+                "HCC \uD83D\uDC78", "HCC college sign drawn with equations", 55.0,
                 // --- H ---
                 EquationEntry.of("x^2/(5^2)+(y+1.2)^2/(2^2)>= 1{0<=y,x^2/(5^2)+(y+1.8)^2/(3^2)<= 1}","#fc9403"),
                 EquationEntry.of("x^2/(5^2)+(y+1.8)^2/(3^2)= 1{0<=y}","#fc9403"),
@@ -94,7 +94,7 @@ public class CollegeEquations extends EquationCategory {
     // =========================================================================
     private EquationPreset vnc() {
         return new EquationPreset(
-                "VNC", "VNC college sign drawn with equations", 20.0,
+                "VNC \uD83D\uDC0D", "VNC college sign drawn with equations", 20.0,
                 EquationEntry.of("y=-x+16{12<y<13}",            "#27AE60"),
                 EquationEntry.of("x=4{8<y<12}",            "#27AE60"),
                 EquationEntry.of("y=-x+6{1<x<2}",             "#27AE60"),
@@ -119,7 +119,7 @@ public class CollegeEquations extends EquationCategory {
 
     private EquationPreset DCC() {
         return new EquationPreset(
-                "DCC", "DCC drawn with line-segment equations", 55.0,
+                "DCC \uD83D\uDC14", "DCC drawn with line-segment equations", 55.0,
                 EquationEntry.of("x^2 = -4*0.5(y-2.4){y>=.9}",            "#000000"),
                 EquationEntry.of("x^2/4+y^2/3=1{y<=.9}",        "#000000"),
                 EquationEntry.of("y+4.7 <= -8(x+.4)^2 + 8{-.79<=x<=-.13, x^2 >= -4*0.5(y-2.4)}","#ff0000"),
@@ -137,7 +137,7 @@ public class CollegeEquations extends EquationCategory {
 
     private EquationPreset DC() {
         return new EquationPreset(
-                "DC", "DC drawn with line-segment equations", 65.0,
+                "DC \uD83D\uDC80", "DC drawn with line-segment equations", 65.0,
                 // --- I1 ---
                 EquationEntry.of("((x+y)/sqrt(2))^2 <= (0.2 + 0.4/(1 + exp(-1.5*(x-y)/sqrt(2))))^2 {-7 <= (x-y)/sqrt(2) <= 5}","#d67302"),
                 EquationEntry.of("(((x-y)/sqrt(2)-5)/0.4)^2 + (((x+y)/sqrt(2))/0.6)^2 <= 1 {(x-y)/sqrt(2) >= 5}","#d67302"),

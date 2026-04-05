@@ -17,27 +17,24 @@ public class ArtEquations extends EquationCategory {
             Color.web("#483D8B"), Color.web("#006400"),
     };
 
-    @Override public String getCategoryName() { return "Math Art"; }
-    @Override public String getCategoryEmoji() { return "🎨"; }
+    @Override public String getCategoryName() { return "Cartoons"; }
+    @Override public String getCategoryEmoji() { return "\uD83D\uDC3C"; }
     @Override public Color[] getColors()       { return PALETTE; }
 
     @Override
     public List<EquationPreset> getPresets() {
         return Arrays.asList(
                 MickeyMouse(),
-                lissajous(),
-                spirograph(),
                 Pumpkin(),
                 Among_Us(),
-                Yin_Yang_simble(),
-                hypotrochoid()
+                Yin_Yang_simble()
         );
     }
 
     // Lemniscate of Bernoulli  (x²+y²)² = 2(x²−y²)
     private EquationPreset MickeyMouse() {
         return new EquationPreset(
-                "Lemniscate ∞", "Lemniscate of Bernoulli: (x²+y²)² = 2(x²−y²)", 20.0,
+                "MickeyMouse \uD83D\uDC2D", "MickeyMouse", 20.0,
                 EquationEntry.of("x² + y² ≤ 100", "#f1c27d") ,
                 EquationEntry.of("x² + y² = 100", "#000000"),
                 EquationEntry.of("(x+8)² + (y-10)² < 3²", "#000000"),
@@ -55,24 +52,8 @@ public class ArtEquations extends EquationCategory {
         );
     }
 
-    // Lissajous figure (3:2 ratio)
-    private EquationPreset lissajous() {
-        return new EquationPreset(
-                "Lissajous 🎵", "Lissajous figure with 3:2 frequency ratio", 95.0,
-                EquationEntry.of("(sin(3*t),sin(2*t))", "#008080")         // deep teal
-        );
-    }
-
-    // Spirograph  R=8, r=1  →  7-pointed star
-    private EquationPreset spirograph() {
-        return new EquationPreset(
-                "Spirograph 🌀", "Spirograph (hypotrochoid) R=8, r=1", 12.0,
-                EquationEntry.of("(7*cos(t)+cos(7*t),7*sin(t)-sin(7*t))", "#9400D3")  // vivid violet
-        );
-    }
-
     private EquationPreset Pumpkin() {
-        return new EquationPreset("Halloween Pumpkin", "Halloween Pumpkin", 40.0,
+        return new EquationPreset("Halloween Pumpkin \uD83C\uDF83", "Halloween Pumpkin", 40.0,
                 EquationEntry.of("x²/9+y²/16 = 1{-1.5<x<1.5,y<0}", "#ff9500"),
                 EquationEntry.of("x²/9+y²/16 = 1{-2.2<x<2.2,y>0}", "#ff9500"),
                 EquationEntry.of("(x-2)²/9+y²/16 = 1{x>1}", "#ff9500"),
@@ -99,7 +80,7 @@ public class ArtEquations extends EquationCategory {
 
     private EquationPreset Among_Us() {
         return new EquationPreset(
-                "ANGEL HALO ", "AMONG US ANGEL HALO Character", 40.0,
+                "Among Us ඞ", "AMONG US ANGEL HALO Character", 40.0,
                 EquationEntry.of("(x-.3)²/16+(y-1.1)²/30=1{-2.5<x<3.736,y>3}", "#0000ff"),
                 EquationEntry.of("(x-.4)²/12+(y+0.5)²/100=1{-4.235<y<5.03,x<-2}", "#0000ff"),
                 EquationEntry.of("(x+1.4)²/2+(y+4.3)²/5=1{y<-4}", "#0000ff"),
@@ -114,10 +95,9 @@ public class ArtEquations extends EquationCategory {
         );
     }
 
-    // Serpentine  y = x/(x²+1)
     private EquationPreset Yin_Yang_simble() {
         return new EquationPreset(
-                "Yin_Yang_simble ࿊", "Yin_Yang_simble curve)", 55.0,
+                "Yin Yang ࿊", "Yin_Yang_simble curve)", 55.0,
                 EquationEntry.of("4.74^2 >= (x-0)^2 + (y-0)^2{2.37^2 <= (x-0)^2 + (y-2.37)^2,0<=x,.6^2 <= (x-0)^2 + (y+2.4)^2}", "#000000"),
                 EquationEntry.of(".6^2 >= (x-0)^2 + (y-2.4)^2", "#000000"),
                 EquationEntry.of(".6^2 = (x-0)^2 + (y+2.4)^2", "#000000"),
@@ -128,11 +108,4 @@ public class ArtEquations extends EquationCategory {
         );
     }
 
-    // Hypotrochoid  R=5, r=3, d=5
-    private EquationPreset hypotrochoid() {
-        return new EquationPreset(
-                "Hypotrochoid 🌟", "Hypotrochoid: R=5, r=3, d=5", 15.0,
-                EquationEntry.of("((5-3)*cos(t)+5*cos((5-3)/3*t),(5-3)*sin(t)-5*sin((5-3)/3*t))", "#483D8B") // slate blue
-        );
-    }
 }

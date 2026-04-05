@@ -17,7 +17,7 @@ public class CartoonEquations extends EquationCategory {
             Color.web("#FF3B30"), Color.web("#5AC8FA"),
     };
 
-    @Override public String getCategoryName() { return "Cartoon"; }
+    @Override public String getCategoryName() { return "Super-Heroes"; }
     @Override public String getCategoryEmoji() { return "🎭"; }
     @Override public Color[] getColors()       { return PALETTE; }
 
