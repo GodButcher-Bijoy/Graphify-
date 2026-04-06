@@ -379,6 +379,10 @@ public class UIManager {
             } else {
                 inputBox.clear();
                 sliderContainer.getChildren().clear();
+                // Reset the math display overlay so it doesn't linger after clear
+                mathDisplay.getChildren().clear();
+                mathDisplay.setVisible(false);
+                inputBox.setOpacity(1);
                 redrawCallback.run();
             }
         };
@@ -502,10 +506,10 @@ public class UIManager {
         appState.getGlobalVariables().putIfAbsent(varName, 1.0);
         appState.getActiveSliderVars().add(varName);
 
-        // ১. Deleted flag: Slider delete hoye gele eita true hobe
+        // ১. Deleted flag
         final boolean[] isDeleted = {false};
 
-        HBox row = new HBox(8);
+        HBox row = new HBox(6);
         row.setAlignment(Pos.CENTER_LEFT);
         row.getProperties().put("varName", varName);
         row.setStyle("-fx-background-color: #222; -fx-background-radius: 5; -fx-padding: 8; -fx-border-color: #444; -fx-border-radius: 5;");
@@ -516,26 +520,71 @@ public class UIManager {
         nameLbl.setFont(Font.font("Consolas", FontWeight.BOLD, 14));
         nameLbl.setMinWidth(Region.USE_PREF_SIZE);
 
+        // Current value display
         TextField valInput = new TextField(String.format("%.2f", appState.getGlobalVariables().get(varName)));
-        valInput.setPrefWidth(55);
-        valInput.setMinWidth(55);
+        valInput.setPrefWidth(50);
+        valInput.setMinWidth(50);
         valInput.setStyle("-fx-background-color: #333; -fx-text-fill: white; -fx-font-size: 11px;");
 
+        // ── NEW: min / max range inputs ──────────────────────────────────────
+        String rangeFldStyle = "-fx-background-color: #2a2a2a; -fx-text-fill: #aaa; " +
+                "-fx-font-size: 10px; -fx-border-color: #555; -fx-border-radius: 3; " +
+                "-fx-background-radius: 3; -fx-padding: 2 3;";
+
+        TextField minField = new TextField("-10");
+        minField.setPrefWidth(38);
+        minField.setMinWidth(38);
+        minField.setMaxWidth(38);
+        minField.setStyle(rangeFldStyle);
+        minField.setPromptText("min");
+
+        TextField maxField = new TextField("10");
+        maxField.setPrefWidth(38);
+        maxField.setMinWidth(38);
+        maxField.setMaxWidth(38);
+        maxField.setStyle(rangeFldStyle);
+        maxField.setPromptText("max");
+
+        // Initial slider uses -10…10 matching the field defaults
         Slider slider = new Slider(-10, 10, appState.getGlobalVariables().get(varName));
-        slider.setPrefWidth(100);
+        slider.setPrefWidth(80);
         HBox.setHgrow(slider, Priority.ALWAYS);
 
-        boolean[] isPlaying = {false};
+        // ── Dynamic animation step = (max − min) / 200 ───────────────────────
+        // Stored in a 1-element array so the lambda can read the latest value.
+        final double[] animStep = { (slider.getMax() - slider.getMin()) / 200.0 };
+
+        // Helper: parse a range field safely; returns fallback on bad input
+        java.util.function.BiConsumer<Boolean, Boolean> applyRange = (updateMin, updateMax) -> {
+            try {
+                double newMin = Double.parseDouble(minField.getText().trim());
+                double newMax = Double.parseDouble(maxField.getText().trim());
+                if (newMin >= newMax) return;            // ignore invalid range
+                if (updateMin) slider.setMin(newMin);
+                if (updateMax) slider.setMax(newMax);
+                animStep[0] = (slider.getMax() - slider.getMin()) / 200.0;
+                // Clamp current value into new range
+                double clamped = Math.max(slider.getMin(), Math.min(slider.getMax(), slider.getValue()));
+                slider.setValue(clamped);
+            } catch (NumberFormatException ignored) {}
+        };
+
+        minField.setOnAction(e -> applyRange.accept(true,  false));
+        maxField.setOnAction(e -> applyRange.accept(false, true));
+        minField.focusedProperty().addListener((obs, o, n) -> { if (!n) applyRange.accept(true,  false); });
+        maxField.focusedProperty().addListener((obs, o, n) -> { if (!n) applyRange.accept(false, true);  });
+
+        boolean[] isPlaying   = {false};
         boolean[] goingForward = {true};
         Button playBtn = new Button("\u25B6");
-        playBtn.setMinWidth(30);
+        playBtn.setMinWidth(28);
         playBtn.setStyle("-fx-background-color: #4a8af4; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
 
-        // Stepper logic e check kora hobe slider deleted kina
+        // Stepper uses dynamic animStep
         Runnable stepper = () -> {
-            if (isDeleted[0]) return; // Fix: Slider delete hole r value change hobe na
-            double cur = slider.getValue();
-            double step = 0.1;
+            if (isDeleted[0]) return;
+            double cur  = slider.getValue();
+            double step = animStep[0];
             if (goingForward[0]) {
                 if (cur + step >= slider.getMax()) goingForward[0] = false;
                 slider.setValue(cur + step);
@@ -549,7 +598,7 @@ public class UIManager {
             if (isPlaying[0]) {
                 isPlaying[0] = false;
                 sliderSteppers.remove(stepper);
-                activeAnimationCount = Math.max(0, activeAnimationCount - 1); // Fix: decrement safely
+                activeAnimationCount = Math.max(0, activeAnimationCount - 1);
                 playBtn.setText("\u25B6");
                 ensureSharedTimerRunning();
             }
@@ -567,22 +616,16 @@ public class UIManager {
             ensureSharedTimerRunning();
         });
 
-        // ২. Updated removeSliderAction
+        // ২. Remove action
         Runnable removeSliderAction = () -> {
-            if (isDeleted[0]) return; // Agei delete hoye thakle kichu korbe na
-            isDeleted[0] = true; // Mark as deleted immediately
-
-            stopAnimation.run(); // Animation stop kora holo
-
-            // UI theke slider row remove
+            if (isDeleted[0]) return;
+            isDeleted[0] = true;
+            stopAnimation.run();
             sliderContainer.getChildren().remove(row);
-
-            // Memory theke sob clean kora holo
             appState.getActiveSliderVars().remove(varName);
-            appState.getGlobalVariables().remove(varName); // Value deleted properly
-
+            appState.getGlobalVariables().remove(varName);
             updateSliderPrompt(inputBox.getText(), promptBox, sliderContainer, inputBox);
-            redrawCallback.run(); // Graph/Canvas redraw
+            redrawCallback.run();
         };
 
         row.setUserData(removeSliderAction);
@@ -590,17 +633,27 @@ public class UIManager {
         Button closeBtn = createIconButton("M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z", "gray", 14);
         closeBtn.setOnAction(e -> removeSliderAction.run());
 
-        // ৩. Slider listener e check add kora holo
+        // ৩. Slider value listener
         slider.valueProperty().addListener((obs, o, n) -> {
-            if (isDeleted[0]) return; // Fix: Slider delete hoye gele memory-te r value push korbe na
+            if (isDeleted[0]) return;
             appState.getGlobalVariables().put(varName, n.doubleValue());
             valInput.setText(String.format("%.2f", n.doubleValue()));
             if (!isPlaying[0]) redrawCallback.run();
         });
 
-        row.getChildren().addAll(nameLbl, valInput, slider, playBtn, closeBtn);
+        // Allow typing directly in valInput to jump slider to that value
+        valInput.setOnAction(e -> {
+            try {
+                double v = Double.parseDouble(valInput.getText().trim());
+                v = Math.max(slider.getMin(), Math.min(slider.getMax(), v));
+                slider.setValue(v);
+            } catch (NumberFormatException ignored) {}
+        });
+
+        row.getChildren().addAll(nameLbl, valInput, minField, slider, maxField, playBtn, closeBtn);
         sliderContainer.getChildren().add(row);
         updateSliderPrompt(inputBox.getText(), promptBox, sliderContainer, inputBox);
+        redrawCallback.run();
     }
 
     // Shared animation timer: sob slider mile ekbare redraw korbe

@@ -178,7 +178,7 @@ public class MainApp1 extends Application {
             // Category header (non-clickable label row)
             MenuItem catLabel = new MenuItem(category.getMenuLabel());
             catLabel.setStyle(
-                    "-fx-text-fill: #9D00FF; -fx-font-weight: bold; -fx-font-size: 13px;"
+                    "-fx-text-fill: #1dd7f5; -fx-font-weight: bold; -fx-font-size: 13px;"
             );
             catLabel.setDisable(true);          // header row is not clickable
             menu.getItems().add(catLabel);

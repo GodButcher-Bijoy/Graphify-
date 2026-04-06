@@ -215,9 +215,9 @@ public class SelectionScene {
         leftBox.getChildren().addAll(word1, word2, word3);
 
         Button btnAbout = new Button("ABOUT US");
-        setupFloatingButton(btnAbout, "#FFFFFF", onAbout);
-        btnAbout.setPrefWidth(200);
-        btnAbout.setStyle(btnAbout.getStyle() + "-fx-font-size: 14px; -fx-padding: 15 30;");
+        setupFloatingButton(btnAbout, "#FFFFF0", onAbout);
+        btnAbout.setPrefWidth(80);
+        btnAbout.setStyle(btnAbout.getStyle() + "-fx-font-size: 9px; -fx-padding: 10 15;");
 
         StackPane bottomPane = new StackPane(btnAbout);
         bottomPane.setAlignment(Pos.BOTTOM_RIGHT);
@@ -235,67 +235,210 @@ public class SelectionScene {
     }
 
     // =========================================================================
-    // ABOUT US SCENE — now uses the same 3D background as the main menu
+    // ABOUT US SCENE
     // =========================================================================
     public static Parent createAboutScene(Runnable onBack) {
         StackPane root = new StackPane();
         root.setStyle("-fx-background-color: #050505;");
-
-        // ── 1. Same 3D grid + neon cube background ──
         root.getChildren().addAll(create3DBackground(root));
 
-        // ── 2. Content overlay ──
-        AnchorPane layout = new AnchorPane();
-        layout.setPickOnBounds(false);
+        // ── Scrollable content so nothing gets cut off ──
+        VBox page = new VBox(50);
+        page.setAlignment(Pos.TOP_CENTER);
+        page.setPadding(new Insets(30, 80, 30, 80));
 
-        VBox block1 = createTransparentBlock(
+        // ── "ABOUT US" title ──
+        Label title = new Label("ABOUT  US");
+        title.setStyle(
+                "-fx-text-fill: #00FFFF; -fx-font-size: 52px; -fx-font-weight: bold;" +
+                        " -fx-font-family: 'Arial Black';"
+                        );
+
+        // ── Developer cards — SAME ROW ──
+        HBox devRow = new HBox(40);
+        devRow.setAlignment(Pos.CENTER);
+
+        VBox card1 = createDevCard(
                 "Md. Ashraf Hossain ",
                 "Core Developer & Systems Logic",
-                "Git Link: ",
-                "https://github.com/ASHFOX474"
-        );
+                "https://github.com/ASHFOX474");
 
-        VBox block2 = createTransparentBlock(
+        VBox card2 = createDevCard(
                 "Lokonath Basak Bijoy",
                 "UI Designer & 3D Visual Developer",
-                "Git Link: ",
-                " https://github.com/GodButcher-Bijoy"
-        );
+                "https://github.com/GodButcher-Bijoy");
 
-        AnchorPane.setLeftAnchor(block1, 150.0);
-        AnchorPane.setTopAnchor(block1, 200.0);
+        devRow.getChildren().addAll(card1, card2);
 
-        AnchorPane.setRightAnchor(block2, 150.0);
-        AnchorPane.setBottomAnchor(block2, 200.0);
+        // ── Project description ──
+        VBox descBox = createProjectDescriptionBox();
 
-        Button btnBack = new Button("BACK TO MENU");
+        // ── Back button ──
+        Button btnBack = new Button("← BACK TO MENU");
         setupFloatingButton(btnBack, "#00FFFF", onBack);
-        AnchorPane.setLeftAnchor(btnBack, 50.0);
-        AnchorPane.setBottomAnchor(btnBack, 50.0);
+        btnBack.setPrefWidth(180);
+        btnBack.setStyle(btnBack.getStyle() + "-fx-font-size: 14px; -fx-padding: 10 20;");
+        HBox backRow = new HBox(btnBack);
+        backRow.setAlignment(Pos.CENTER_LEFT);
+        VBox.setMargin(backRow, new Insets(-80, 0, 0, 0));
+        page.getChildren().addAll(title, devRow, descBox, backRow);
 
-        layout.getChildren().addAll(block1, block2, btnBack);
-        root.getChildren().add(layout);
+        javafx.scene.control.ScrollPane scroll =
+                new javafx.scene.control.ScrollPane(page);
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+        scroll.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
 
+        root.getChildren().add(scroll);
         return root;
     }
 
-    // =========================================================================
-    // HELPERS
-    // =========================================================================
-    private static VBox createTransparentBlock(String l1Txt, String l2Txt, String l3Txt, String l4Txt) {
-        VBox box = new VBox(10);
-        box.setStyle("-fx-background-color: rgba(15, 15, 15, 0.75); -fx-background-radius: 15; -fx-padding: 30; -fx-border-color: rgba(255,255,255,0.3); -fx-border-radius: 15;");
-        box.setPrefWidth(400);
+    // ── Single developer card with clickable GitHub link ──────────────────────
+    private static VBox createDevCard(String name, String role, String githubUrl) {
+        VBox box = new VBox(14);
+        box.setStyle(
+                "-fx-background-color: rgba(12,12,12,0.82);" +
+                        "-fx-background-radius: 16;" +
+                        "-fx-padding: 30;" +
+                        "-fx-border-color: rgba(0,255,255,0.25);" +
+                        "-fx-border-radius: 16;" +
+                        "-fx-border-width: 1.5;");
+        box.setPrefWidth(380);
 
-        String styleHeader = "-fx-text-fill: #00FFFF; -fx-font-size: 28px; -fx-font-weight: bold; -fx-font-family: 'Arial';";
-        String styleBody   = "-fx-text-fill: #FFFFFF; -fx-font-size: 18px; -fx-font-family: 'Arial';";
+        // Name
+        Label nameLbl = new Label(name);
+        nameLbl.setStyle(
+                "-fx-text-fill: #00FFFF; -fx-font-size: 22px;" +
+                        "-fx-font-weight: bold; -fx-font-family: 'Arial';");
+        nameLbl.setWrapText(true);
 
-        Label line1 = new Label(l1Txt); line1.setStyle(styleHeader);
-        Label line2 = new Label(l2Txt); line2.setStyle(styleBody);
-        Label line3 = new Label(l3Txt); line3.setStyle(styleBody);
-        Label line4 = new Label(l4Txt); line4.setStyle(styleBody);
+        // Thin divider
+        javafx.scene.shape.Rectangle divider = new javafx.scene.shape.Rectangle(320, 1);
+        divider.setFill(Color.web("#00FFFF", 0.3));
 
-        box.getChildren().addAll(line1, line2, line3, line4);
+        // Role
+        Label roleLbl = new Label(role);
+        roleLbl.setStyle(
+                "-fx-text-fill: #CCCCCC; -fx-font-size: 15px; -fx-font-family: 'Arial';");
+
+        // GitHub row: logo + clickable link
+        javafx.scene.shape.SVGPath githubLogo = new javafx.scene.shape.SVGPath();
+        // Official GitHub mark path (24×24 viewBox)
+        githubLogo.setContent(
+                "M12 0.297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 " +
+                        "11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338" +
+                        ".724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7" +
+                        "c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 " +
+                        "1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305" +
+                        ".76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38" +
+                        " 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 " +
+                        "3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405" +
+                        " 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 " +
+                        "3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475" +
+                        " 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286" +
+                        " 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297" +
+                        "c0-6.627-5.373-12-12-12");
+        // Scale from 24px viewBox down to ~20px display
+        double logoScale = 20.0 / 24.0;
+        githubLogo.setScaleX(logoScale);
+        githubLogo.setScaleY(logoScale);
+        githubLogo.setFill(Color.web("#AAAAAA"));
+
+        Label linkLbl = new Label(githubUrl);
+        linkLbl.setStyle(
+                "-fx-text-fill: #7EC8E3; -fx-font-size: 14px;" +
+                        "-fx-font-family: 'Consolas', monospace;" +
+                        "-fx-underline: true; -fx-cursor: hand;");
+        linkLbl.setWrapText(true);
+
+        HBox githubRow = new HBox(10, githubLogo, linkLbl);
+        githubRow.setAlignment(Pos.CENTER_LEFT);
+        githubRow.setCursor(javafx.scene.Cursor.HAND);
+
+        // Hover: brighten logo + link
+        githubRow.setOnMouseEntered(e -> {
+            githubLogo.setFill(Color.web("#FFFFFF"));
+            linkLbl.setStyle(linkLbl.getStyle().replace("#7EC8E3", "#00FFFF"));
+        });
+        githubRow.setOnMouseExited(e -> {
+            githubLogo.setFill(Color.web("#AAAAAA"));
+            linkLbl.setStyle(linkLbl.getStyle().replace("#00FFFF", "#7EC8E3"));
+        });
+
+        // Click: open in system browser
+        githubRow.setOnMouseClicked(e -> {
+            try {
+                java.awt.Desktop.getDesktop()
+                        .browse(new java.net.URI(githubUrl));
+            } catch (Exception ex) {
+                System.err.println("Cannot open browser: " + ex.getMessage());
+            }
+        });
+
+        box.getChildren().addAll(nameLbl, divider, roleLbl, githubRow);
+        return box;
+    }
+
+    // ── Project description card ──────────────────────────────────────────────
+    private static VBox createProjectDescriptionBox() {
+        VBox box = new VBox(16);
+        box.setStyle(
+                "-fx-background-color: rgba(12,12,12,0.82);" +
+                        "-fx-background-radius: 16;" +
+                        "-fx-padding: 35;" +
+                        "-fx-border-color: rgba(176,38,255,0.35);" +
+                        "-fx-border-radius: 16;" +
+                        "-fx-border-width: 1.5;");
+        box.setMaxWidth(800);
+
+        Label heading = new Label("⬡  ABOUT GRAPHIFY");
+        heading.setStyle(
+                "-fx-text-fill: #B026FF; -fx-font-size: 22px;" +
+                        "-fx-font-weight: bold; -fx-font-family: 'Arial';");
+
+        javafx.scene.shape.Rectangle divider = new javafx.scene.shape.Rectangle(730, 1);
+        divider.setFill(Color.web("#B026FF", 0.3));
+
+        String desc =
+                "Graphify is an interactive mathematical graphing application built with JavaFX. " +
+                        "It lets you plot any combination of Cartesian, polar, parametric, implicit, and " +
+                        "inequality equations in real time — all rendered on a smooth, pannable, zoomable " +
+                        "canvas.\n\n" +
+                        "The app ships with a curated Curves Library containing hand-crafted presets ranging " +
+                        "from cartoon characters and college logos to nature-inspired spirals and mathematical " +
+                        "art. Each equation supports boundary conditions, animated sliders for free variables, " +
+                        "and a live pretty-print overlay that formats raw input into clean mathematical notation " +
+                        "as you type.\n\n" +
+                        "Graphify was developed as a semester project at Notre Dame College, Dhaka, " +
+                        "with a focus on combining rigorous numerical methods with a polished, " +
+                        "Desmos-inspired user experience.";
+
+        Label descLbl = new Label(desc);
+        descLbl.setStyle(
+                "-fx-text-fill: #DDDDDD; -fx-font-size: 14px;" +
+                        "-fx-font-family: 'Arial'; -fx-line-spacing: 4;");
+        descLbl.setWrapText(true);
+
+        // Tech stack row
+        Label techHead = new Label("BUILT WITH");
+        techHead.setStyle(
+                "-fx-text-fill: #888888; -fx-font-size: 12px;" +
+                        "-fx-font-weight: bold; -fx-font-family: 'Arial';");
+
+        HBox techRow = new HBox(12);
+        techRow.setAlignment(Pos.CENTER_LEFT);
+        for (String tag : new String[]{"Java 17", "JavaFX 21", "exp4j", "CSS / FX-CSS"}) {
+            Label chip = new Label(tag);
+            chip.setStyle(
+                    "-fx-background-color: rgba(176,38,255,0.18);" +
+                            "-fx-background-radius: 20;" +
+                            "-fx-padding: 4 12;" +
+                            "-fx-text-fill: #CC88FF;" +
+                            "-fx-font-size: 12px; -fx-font-family: 'Arial';");
+            techRow.getChildren().add(chip);
+        }
+
+        box.getChildren().addAll(heading, divider, descLbl, techHead, techRow);
         return box;
     }
 
@@ -340,7 +483,37 @@ public class SelectionScene {
 
         btn.setOnMousePressed(e -> {
             sink.playFromStart();
-            btn.setStyle(baseStyle.replace("#080808", "#000000"));
+            if (btn.getText() == "ABOUT US") {
+                btn.setStyle("-fx-font-size: 9px; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-letter-spacing: 2px; " +
+                        "-fx-background-radius: 8; " +
+                        "-fx-border-color: " + neonHex + "; " +
+                        "-fx-border-radius: 8; " +
+                        "-fx-border-width: 2; " +
+                        "-fx-text-fill: " + neonHex + "; " +
+                        "-fx-alignment: center; " +
+                        "-fx-cursor: hand; " +
+                        "-fx-background-color: #080808; " +
+                        "-fx-padding: 10 15;");
+            }
+            else if (btn.getText() == "← BACK TO MENU") {
+                btn.setStyle("-fx-font-size: 14px; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-letter-spacing: 2px; " +
+                        "-fx-background-radius: 8; " +
+                        "-fx-border-color: " + neonHex + "; " +
+                        "-fx-border-radius: 8; " +
+                        "-fx-border-width: 2; " +
+                        "-fx-text-fill: " + neonHex + "; " +
+                        "-fx-alignment: center; " +
+                        "-fx-cursor: hand; " +
+                        "-fx-background-color: #080808; " +
+                        "-fx-padding: 10 20;");
+            }
+            else {
+                btn.setStyle(baseStyle.replace("#080808", "#000000"));
+            }
             glow.setRadius(5);
         });
 
