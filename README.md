@@ -62,7 +62,7 @@ Over 20 hand-crafted presets across 5 categories — Batman, Pikachu, Mickey Mou
 
 ### 📥 Step 1 — Download
 
-1. Go to the [**Releases**](https://github.com/yourusername/Graphify/releases/latest) page
+1. Go to the [**Releases**](https://github.com/GodButcher-Bijoy/Graphify-/releases) page
 2. Download **`Graphify-Installers.zip`**
 3. **Extract the ZIP** — you will find two files inside:
 
