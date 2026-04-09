@@ -7,7 +7,6 @@
 [![Platform macOS](https://img.shields.io/badge/macOS-000000?style=flat-square&logo=apple&logoColor=white)](https://www.apple.com/macos/)
 [![Platform Windows](https://img.shields.io/badge/Windows-0078D4?style=flat-square&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
 [![JavaFX](https://img.shields.io/badge/Powered%20by-JavaFX%2021-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjfx.io/)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 **A stunning, feature-rich mathematical graphing application.**  
 Plot equations, explore curves, and visualize mathematics like never before.
@@ -272,12 +271,6 @@ Click the **🔍 re-center button** (top-right corner of the graph) to reset the
 | [JavaFX 21](https://openjfx.io/) | UI, Canvas rendering, 3D intro |
 | [exp4j 0.4.8](https://www.objecthunter.net/exp4j/) | Math expression evaluator |
 | [Apache Maven](https://maven.apache.org/) | Build & packaging |
-
----
-
-## 📝 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 ---
 
