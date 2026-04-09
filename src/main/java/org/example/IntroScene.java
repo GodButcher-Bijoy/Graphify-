@@ -110,7 +110,7 @@ public class IntroScene {
         double cubeSize = 70;
         double startX = -350;
 
-        // এখানে shiftUp ভ্যালু দিয়ে কিউবটাকে কতটা উপরে তুলবো তা নির্ধারণ করেছি
+
         double shiftUp = 100;
         double restY = groundLevel - shiftUp - (cubeSize / 2.0);
 
@@ -124,7 +124,7 @@ public class IntroScene {
         textContainer.setAlignment(Pos.CENTER);
         textContainer.setMaxWidth(800);
 
-        // টেক্সটগুলোকেও shiftUp পরিমাণ উপরে তুলে দেওয়া হয়েছে
+
         textContainer.setTranslateY(groundLevel - 440 - shiftUp);
         textContainer.setTranslateX(0);
 
@@ -165,7 +165,7 @@ public class IntroScene {
 
         // --- 6. Animation ---
 
-        // 3D Graph Paper Reveal Sequence (প্রথম অ্যানিমেশন)
+        // 3D Graph Paper Reveal Sequence
         SequentialTransition gridReveal = new SequentialTransition();
 
         FadeTransition horizonFade = new FadeTransition(Duration.millis(150), horizonBar);
@@ -196,7 +196,6 @@ public class IntroScene {
         }
         gridReveal.getChildren().add(xLineFan);
 
-        // Cube Drop & Roll Sequence (দ্বিতীয় অ্যানিমেশন)
         TranslateTransition drop = new TranslateTransition(Duration.seconds(.8), cubeGroup);
         drop.setToY(restY);
         drop.setInterpolator(Interpolator.EASE_IN);
@@ -247,7 +246,7 @@ public class IntroScene {
             currentAngle += 90;
         }
 
-        // সিকোয়েন্স চেঞ্জ করা হয়েছে: আগে gridReveal, তারপর drop, bounce ও rollingSequence
+
         SequentialTransition masterSequence = new SequentialTransition(
                 gridReveal,
                 drop, bounce, new PauseTransition(Duration.seconds(0.1)),

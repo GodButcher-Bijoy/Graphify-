@@ -125,7 +125,6 @@ public class GraphRenderer {
                 String eqStr = EquationHandler.reverseAutoFormat(rawInput.replace(" ", ""));
                 FunctionPlotter.BoundaryCondition boundary = null;
 
-                // ⚠️ NEW: বাউন্ডারি কন্ডিশন { } চেক করা এবং আলাদা করা
                 if (eqStr.contains("{") && eqStr.contains("}")) {
                     int start = eqStr.lastIndexOf("{");
                     int end = eqStr.lastIndexOf("}");
@@ -139,12 +138,16 @@ public class GraphRenderer {
                 // ─── POLAR equation  r = f(t)  ──────────────────────────────────
                 // Convert  r=expr  to parametric (expr*cos(t), expr*sin(t))
                 // Lowercase check handles both "r=" and "R="
+                // FIX: t must start at 0, not negative. Negative t makes r negative,
+                // which mirrors the curve 180° and draws a second unwanted ghost copy.
+                // 0 → 8π gives 4 full rotations — sufficient for spirals and roses.
                 String eqLower = eqStr.toLowerCase();
                 if (eqLower.startsWith("r=")) {
                     String rExpr = eqStr.substring(2); // expression after "r="
                     String xEq = "(" + rExpr + ")*cos(t)";
                     String yEq = "(" + rExpr + ")*sin(t)";
-                    functionPlotter.plotParametric(xEq, yEq, rowColor, centerX, centerY, width, height, boundary);
+                    functionPlotter.plotParametric(xEq, yEq, rowColor, centerX, centerY, width, height, boundary,
+                            0, 8 * Math.PI);
                     continue;
                 }
 
@@ -155,15 +158,15 @@ public class GraphRenderer {
                             String xPart = parts[0].trim();
                             String yPart = parts[1].trim();
 
-                            // ⚠️ NEW: প্যারামেট্রিক ইকুয়েশন (t) চেক করা
+
                             if (xPart.contains("t") || yPart.contains("t")) {
                                 functionPlotter.plotParametric(xPart, yPart, rowColor, centerX, centerY, width, height, boundary);
                             } else {
-                                // সাধারণ পয়েন্ট ড্র করা
+
                                 double pX = EquationHandler.buildExpression(xPart, "x", appState.getGlobalVariables()).evaluate();
                                 double pY = EquationHandler.buildExpression(yPart, "x", appState.getGlobalVariables()).evaluate();
 
-                                // ⚠️ NEW: পয়েন্টের উপর বাউন্ডারি চেক
+
                                 if (boundary != null && !boundary.test(pX, pY, 0)) continue;
 
                                 double screenX = centerX + (pX * appState.getScale());
@@ -504,22 +507,22 @@ public class GraphRenderer {
             double screenX = cx + p.getX() * scale;
             double screenY = cy - p.getY() * scale;
 
-            // ১. পিন করা পয়েন্টের গোল্লা আঁকা
+
             gc.setFill(Color.web("#007AFF"));
             gc.fillOval(screenX - 5, screenY - 5, 10, 10);
             gc.setStroke(Color.web("#888888", 0.0));
             gc.strokeOval(screenX - 5, screenY - 5, 10, 10);
 
-            // ২. নেগেটিভ জিরো ফিক্স করা
+
             double xVal = Math.abs(p.getX()) < 0.0001 ? 0.0 : p.getX();
             double yVal = Math.abs(p.getY()) < 0.0001 ? 0.0 : p.getY();
             String label = String.format("(%.2f, %.2f)", xVal, yVal);
 
-            // ৩. লেবেল বক্সের কালার পরিবর্তন (এখানে পছন্দমতো কালার দিন)
+
             gc.setFill(Color.web("#2c3e50", 0.9)); // সুন্দর ডার্ক থিম
             gc.fillRoundRect(screenX + 12, screenY - 22, 90, 25, 6, 6);
 
-            // ৪. টেক্সট আঁকা
+
             gc.setFill(Color.WHITE);
             gc.fillText(label, screenX + 18, screenY - 4);
         }

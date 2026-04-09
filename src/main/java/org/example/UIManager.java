@@ -38,7 +38,7 @@ public class UIManager {
     public VBox getFunctionContainer() {
         return functionContainer;
     }
-    // Parameter e backBtn ar libraryBtn add kora holo
+
     public HBox createSidebar(Button backBtn, Button libraryBtn) {
         VBox sidebar = new VBox(15);
         sidebar.setPadding(new Insets(30, 20, 30, 20));
@@ -53,7 +53,7 @@ public class UIManager {
         sidebarGlow.setColor(Color.web("#9D00FF", 0.5));
         sidebar.setEffect(sidebarGlow);
 
-        // --- Home (Back) ebang Library button ke pasapasi rakha holo ---
+
         HBox topButtons = new HBox(15, backBtn, libraryBtn); // 15 hocche spacing
         topButtons.setAlignment(Pos.CENTER_LEFT); // Bam pashe align korlam
         VBox.setMargin(topButtons, new Insets(0, 0, 10, 0));
@@ -92,7 +92,6 @@ public class UIManager {
 
         VBox.setVgrow(floatingBoxContainer, Priority.ALWAYS);
 
-        // topButtons sidebar er baccha hishebe add kora holo
         sidebar.getChildren().addAll(topButtons, inputLabel, floatingBoxContainer);
 
         Pane slideContainer = new Pane(sidebar);
@@ -313,7 +312,7 @@ public class UIManager {
         buttonBox.setPickOnBounds(false);
 
         StackPane.setAlignment(buttonBox, Pos.TOP_RIGHT);
-        // --- LOOK UPDATE: ক্রস বাটনকে উপরের দিকে (Margin কমিয়ে) সরানো হয়েছে ---
+
         StackPane.setMargin(buttonBox, new Insets(3, 5, 0, 0));
         String EYE_OPEN = "M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z";
         String EYE_CLOSED = "M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92C21.42 14.97 22.52 13.56 23 12c-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.06 7.13 11 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z";
@@ -331,18 +330,18 @@ public class UIManager {
             mainRow.getProperties().put("isHidden", !isHidden);
 
             if (!isHidden) {
-                // বন্ধ করার আইকন এবং ইনপুট বক্স হালকা করে দেওয়া
+
                 ((SVGPath) eyeBtn.getGraphic()).setContent(EYE_CLOSED);
                 inputInner.setOpacity(0.4);
             } else {
-                // খোলার আইকন এবং ইনপুট বক্স স্বাভাবিক করে দেওয়া
+
                 ((SVGPath) eyeBtn.getGraphic()).setContent(EYE_OPEN);
                 inputInner.setOpacity(1.0);
             }
-            redrawCallback.run(); // Graph Canvas আপডেট করবে
+            redrawCallback.run();
         });
         Button closeBtn = createIconButton("M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z", "gray", 10);
-        // --- LOOK UPDATE: এখান থেকেও টপ মার্জিন কমিয়ে দেওয়া হয়েছে ---
+
         HBox.setMargin(closeBtn, new Insets(2, 5, 0, 0));
 
         closeBtn.setOnMouseEntered(e -> ((SVGPath)closeBtn.getGraphic()).setFill(Color.RED));
@@ -407,7 +406,7 @@ public class UIManager {
 
         mainRow.getChildren().addAll(inputWrapper, sliderContainer);
 
-        // --- NEW: Creation Animation (মাঝখান থেকে প্রসারিত হবে, একটু ধীরগতিতে) ---
+
         mainRow.setScaleX(0.0);
         mainRow.setOpacity(0.0);
 
@@ -509,11 +508,9 @@ public class UIManager {
         // ১. Deleted flag
         final boolean[] isDeleted = {false};
 
-        HBox row = new HBox(6);
-        row.setAlignment(Pos.CENTER_LEFT);
+        VBox row = new VBox(5);
         row.getProperties().put("varName", varName);
-        row.setStyle("-fx-background-color: #222; -fx-background-radius: 5; -fx-padding: 8; -fx-border-color: #444; -fx-border-radius: 5;");
-        row.setMinWidth(Region.USE_PREF_SIZE);
+        row.setStyle("-fx-background-color: #222; -fx-background-radius: 5; -fx-padding: 6 8 6 8; -fx-border-color: #444; -fx-border-radius: 5;");
 
         Label nameLbl = new Label(varName + " =");
         nameLbl.setTextFill(Color.WHITE);
@@ -650,13 +647,28 @@ public class UIManager {
             } catch (NumberFormatException ignored) {}
         });
 
-        row.getChildren().addAll(nameLbl, valInput, minField, slider, maxField, playBtn, closeBtn);
+        // ── Two-row layout so everything fits without horizontal scrolling ───────
+        // Row 1: "a = 1.00  [▶] [✕]"
+        HBox topRow = new HBox(6);
+        topRow.setAlignment(Pos.CENTER_LEFT);
+        HBox topSpacer = new HBox();
+        HBox.setHgrow(topSpacer, Priority.ALWAYS);
+        topRow.getChildren().addAll(nameLbl, valInput, topSpacer, playBtn, closeBtn);
+
+        // Row 2: "-10 [===slider===] 10"
+        HBox botRow = new HBox(4);
+        botRow.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(slider, Priority.ALWAYS);
+        slider.setMaxWidth(Double.MAX_VALUE);
+        botRow.getChildren().addAll(minField, slider, maxField);
+
+        row.getChildren().addAll(topRow, botRow);
         sliderContainer.getChildren().add(row);
         updateSliderPrompt(inputBox.getText(), promptBox, sliderContainer, inputBox);
         redrawCallback.run();
     }
 
-    // Shared animation timer: sob slider mile ekbare redraw korbe
+    // Shared animation timer
     private void ensureSharedTimerRunning() {
         if (sharedAnimationTimer == null) {
             sharedAnimationTimer = new javafx.animation.AnimationTimer() {
@@ -665,7 +677,7 @@ public class UIManager {
                 public void handle(long now) {
                     if (lastNanos == 0) { lastNanos = now; return; }
                     double elapsedMs = (now - lastNanos) / 1_000_000.0;
-                    if (elapsedMs < 16) return; // ~60fps e cap kora holo
+                    if (elapsedMs < 16) return;
                     lastNanos = now;
 
                     boolean anyChanged = false;
@@ -687,15 +699,15 @@ public class UIManager {
     // --- Custom Color Palette Popup Logic ---
     private void showColorPopup(javafx.scene.shape.Circle colorDot, VBox mainRow, javafx.scene.input.MouseEvent event) {
         javafx.stage.Popup popup = new javafx.stage.Popup();
-        popup.setAutoHide(true); // Baire click korle auto close hobe
+        popup.setAutoHide(true);
 
-        // Popup er main container (Grid 5 column kore)
+
         GridPane grid = new GridPane();
         grid.setHgap(8);
         grid.setVgap(8);
         grid.setStyle("-fx-background-color: #2A2A2A; -fx-padding: 15; -fx-background-radius: 10; -fx-border-color: #555; -fx-border-width: 2; -fx-border-radius: 10;");
 
-        // AppState theke 20 ta default color niye aslam
+
         Color[] defaultColors = appState.getGraphColors();
         int col = 0, row = 0;
 
@@ -705,7 +717,7 @@ public class UIManager {
             cDot.setStroke(Color.WHITE);
             cDot.setStrokeWidth(0.5);
 
-            // Kon color e click korle ki hobe
+
             cDot.setOnMouseClicked(e -> {
                 colorDot.setFill(c);
                 mainRow.setUserData(c);
@@ -716,17 +728,17 @@ public class UIManager {
 
             grid.add(cDot, col, row);
             col++;
-            if (col == 5) { col = 0; row++; } // 5 ta color er por notun line
+            if (col == 5) { col = 0; row++; }
         }
 
 
 
-        // --- Custom Color Picker (+ Button) ---
+
         ColorPicker colorPicker = new ColorPicker();
         colorPicker.setVisible(false);
         colorPicker.setManaged(false);
 
-        // Custom color choose korle ki hobe
+
         colorPicker.setOnAction(e -> {
             Color c = colorPicker.getValue();
             colorDot.setFill(c);
@@ -741,14 +753,13 @@ public class UIManager {
         plusBtn.setStyle("-fx-background-color: #444; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold; -fx-background-radius: 50%;");
         plusBtn.setPrefSize(25, 25);
         plusBtn.setCursor(javafx.scene.Cursor.HAND);
-        plusBtn.setOnAction(e -> colorPicker.show()); // + e click korle color picker popup asbe
+        plusBtn.setOnAction(e -> colorPicker.show());
 
         grid.add(plusBtn, col, row);
-        grid.getChildren().add(colorPicker); // Hidden color picker ta grid e add korlam
+        grid.getChildren().add(colorPicker);
 
         popup.getContent().add(grid);
 
-        // Popup ta exactly mouse click er jaigay show korbe
         popup.show(colorDot.getScene().getWindow(), event.getScreenX(), event.getScreenY());
     }
 
@@ -796,7 +807,7 @@ public class UIManager {
             grid.getColumnConstraints().add(col);
         }
 
-        // ⚠️ NEW: "DEL" এর জায়গায় "⌫" এবং "!" এর জায়গায় "AC"
+
         String[][] keys = {
                 {"x", "y", "a²", "aᵇ",  "7", "8", "9", "÷", "⌫"},
                 {"√", "|a|", "<", ">", "4", "5", "6", "×", "="},
@@ -825,7 +836,7 @@ public class UIManager {
                 if (key.equals("↵") || key.equals("=")) {
                     btn.setStyle("-fx-background-color: #4a8af4; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 18px; -fx-cursor: hand; -fx-background-radius: 6;");
                 } else if (key.equals("⌫") || key.equals("AC")) {
-                    // ⚠️ NEW: ⌫ এবং AC দুটোই লাল রঙের হবে যাতে সহজে চোখে পড়ে
+
                     btn.setStyle("-fx-background-color: #FF3B30; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15px; -fx-cursor: hand; -fx-background-radius: 6;");
                 } else if (isNumberOrDot || key.equals("x") || key.equals("y")) {
                     btn.setStyle("-fx-background-color: #2D2D2D; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15px; -fx-cursor: hand; -fx-background-radius: 6;");
@@ -894,13 +905,13 @@ public class UIManager {
             case "↵":
                 focusNextField();
                 return;
-            case "⌫": // ⚠️ NEW: ব্যাকস্পেস আইকনের লজিক
+            case "⌫":
                 if (caretPos > 0) {
                     activeTextField.deleteText(caretPos - 1, caretPos);
                     activeTextField.positionCaret(caretPos - 1);
                 }
                 return;
-            case "AC": // ⚠️ NEW: All Clear লজিক, পুরো টেক্সট মুছে ফেলবে
+            case "AC":
                 activeTextField.clear();
                 return;
             case "a²": textToInsert = "^2"; break;
@@ -916,13 +927,13 @@ public class UIManager {
         activeTextField.insertText(caretPos, textToInsert);
         activeTextField.positionCaret(caretPos + textToInsert.length());
     }
-    // Enter (↵) বাটনের আপডেট লজিক
+
     private void focusNextField() {
         if (activeTextField != null && functionContainer != null) {
             var rows = functionContainer.getChildren();
             int currentIndex = -1;
 
-            // ১. বর্তমান টেক্সটফিল্ডটি কোন রো (Row) এর ভেতর আছে তা খুঁজে বের করা
+
             for (int i = 0; i < rows.size(); i++) {
                 if (containsNode(rows.get(i), activeTextField)) {
                     currentIndex = i;
@@ -930,20 +941,17 @@ public class UIManager {
                 }
             }
 
-            // ২. যদি বর্তমান বক্সটি পাওয়া যায়
             if (currentIndex != -1) {
                 if (currentIndex == rows.size() - 1) {
-                    // যদি এটি একদম শেষের বক্স হয়, তবে নতুন একটি বক্স তৈরি করবে
                     addFunctionInputBox(currentIndex + 1);
                 } else {
-                    // যদি নিচে আরও বক্স থাকে, তবে শুধু নিচের বক্সে ফোকাস করবে
                     focusTextFieldInRowRobust(rows.get(currentIndex + 1));
                 }
             }
         }
     }
 
-    // হেল্পার মেথড ১: টেক্সটফিল্ডটি কোনো কন্টেইনারের ভেতর আছে কি না তা ডিপ-সার্চ করে
+
     private boolean containsNode(javafx.scene.Node parent, javafx.scene.Node target) {
         if (parent == target) return true;
         if (parent instanceof Pane) {
@@ -989,7 +997,7 @@ public class UIManager {
                 if (activeTextField != null) {
                     int caretPos = activeTextField.getCaretPosition();
                     activeTextField.insertText(caretPos, s);
-                    // লেখার সাইজ অনুযায়ী কার্সরকে সামনে সরিয়ে দেওয়া
+
                     activeTextField.positionCaret(caretPos + s.length());
                 }
             });
@@ -1109,16 +1117,20 @@ public class UIManager {
         };
 
         Runnable deleteAction = () -> {
-            cleanupAllSliders.run(); // Sider gulo age clear hobe
+            cleanupAllSliders.run();
             var rows = functionContainer.getChildren();
             int currentIndex = rows.indexOf(mainRow);
 
             if (rows.size() > 1) {
-                // Animation code thakbe...
+
                 rows.remove(mainRow);
             } else {
                 inputBox.clear();
                 sliderContainer.getChildren().clear();
+                // Reset the math display overlay so it doesn't linger after clear
+                mathDisplay.getChildren().clear();
+                mathDisplay.setVisible(false);
+                inputBox.setOpacity(1);
             }
             redrawCallback.run();
         };
@@ -1198,7 +1210,7 @@ public class UIManager {
         String EYE_OPEN = "M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z";
         String EYE_CLOSED = "M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92C21.42 14.97 22.52 13.56 23 12c-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.06 7.13 11 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z";
 
-        mainRow.getProperties().put("isHidden", false); // ডিফল্টভাবে Visible থাকবে
+        mainRow.getProperties().put("isHidden", false);
 
         Button eyeBtn = createIconButton(EYE_OPEN, "gray", 12);
         HBox.setMargin(eyeBtn, new Insets(1, 2, 0, 0));
@@ -1211,15 +1223,15 @@ public class UIManager {
             mainRow.getProperties().put("isHidden", !isHidden);
 
             if (!isHidden) {
-                // বন্ধ করার আইকন এবং ইনপুট বক্স হালকা করে দেওয়া
+
                 ((SVGPath) eyeBtn.getGraphic()).setContent(EYE_CLOSED);
                 inputInner.setOpacity(0.4);
             } else {
-                // খোলার আইকন এবং ইনপুট বক্স স্বাভাবিক করে দেওয়া
+
                 ((SVGPath) eyeBtn.getGraphic()).setContent(EYE_OPEN);
                 inputInner.setOpacity(1.0);
             }
-            redrawCallback.run(); // Graph Canvas আপডেট করবে
+            redrawCallback.run();
         });
 
         Button closeBtn = createIconButton(

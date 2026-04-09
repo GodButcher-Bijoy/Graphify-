@@ -148,7 +148,7 @@ public class MainApp1 extends Application {
             graphRenderer.drawGraph();
         });
 
-        // Sidebar e backBtn ebong libraryBtn pass kora hocche
+
         root.setLeft(uiManager.createSidebar(backBtn, libraryBtn));
         root.setCenter(centerWrapper);
 

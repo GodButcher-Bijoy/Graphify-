@@ -409,9 +409,9 @@ public class SelectionScene {
                         "art. Each equation supports boundary conditions, animated sliders for free variables, " +
                         "and a live pretty-print overlay that formats raw input into clean mathematical notation " +
                         "as you type.\n\n" +
-                        "Graphify was developed as a semester project at Notre Dame College, Dhaka, " +
-                        "with a focus on combining rigorous numerical methods with a polished, " +
-                        "Desmos-inspired user experience.";
+                        "Graphify was developed as a semester project at BUET, " +
+                        "with a focus on combining rigorous numerical methods with a polished " +
+                        "user experience.";
 
         Label descLbl = new Label(desc);
         descLbl.setStyle(

@@ -3,6 +3,7 @@ package org.example;
 import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
 import net.objecthunter.exp4j.function.Function;
+import net.objecthunter.exp4j.operator.Operator;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -27,6 +28,42 @@ public class EquationHandler {
         @Override public double apply(double... args) { return Math.cos(args[0]) / Math.sin(args[0]); }
     };
 
+    // ─── Real-valued power operator — fixes x^(2/3) being NaN for x < 0 ─────
+    //
+    // ROOT CAUSE: Java's Math.pow(-2, 0.6667) returns NaN because the JVM does
+    // not attempt rational-root interpretation for negative bases.
+    // Mathematically (-2)^(2/3) = ((-2)²)^(1/3) = 4^(1/3) ≈ 1.587 — fully real.
+    //
+    // FIX: Override exp4j's built-in ^ with this operator.
+    // For a negative base we find the best rational p/q (q ≤ 100) for the exponent:
+    //   • Odd q  → real root exists: (-1)^p · |base|^(p/q)
+    //   • Even q → complex only (e.g. (-1)^0.5 = i) → NaN, graph lifts pen
+    // Positive bases use Math.pow unchanged.
+    private static final Operator REAL_POW = new Operator(
+            "^", 2, false, Operator.PRECEDENCE_POWER) {
+        @Override
+        public double apply(double... args) {
+            double base = args[0];
+            double exp  = args[1];
+            if (Double.isNaN(base) || Double.isNaN(exp)) return Double.NaN;
+            if (base >= 0) return Math.pow(base, exp);   // normal path unchanged
+
+            // base < 0: search for rational approximation of exp = p/q
+            for (int q = 1; q <= 100; q++) {
+                long p = Math.round(exp * q);
+                if (Math.abs(exp - (double) p / q) < 1e-9) {
+                    if (q % 2 == 1) {                    // odd denominator → real
+                        double sign = (p % 2 == 0) ? 1.0 : -1.0;
+                        return sign * Math.pow(-base, exp);
+                    } else {
+                        return Double.NaN;               // even denominator → complex
+                    }
+                }
+            }
+            return Double.NaN; // irrational exponent, no real result for negative base
+        }
+    };
+
     // All names that must NOT be treated as slider variables
     private static final Set<String> RESERVED_WORDS = Set.of(
             "x", "y", "t", "r",
@@ -41,10 +78,10 @@ public class EquationHandler {
     );
 
     // ─── Helpers to attach custom functions to every builder ─────────────────
-    /** Registers sec/csc/cosec/cot on any ExpressionBuilder. Public so that
-     *  other classes (e.g. BoundaryCondition) can reuse the same set. */
+    /** Registers sec/csc/cosec/cot AND the real-power ^ operator on any builder.
+     *  Public so BoundaryCondition inside FunctionPlotter can reuse the same set. */
     public static ExpressionBuilder withCustomFunctions(ExpressionBuilder builder) {
-        return builder.functions(SEC, CSC, COSEC, COT);
+        return builder.functions(SEC, CSC, COSEC, COT).operator(REAL_POW);
     }
 
     // ─── Reverse unicode pretty-print → raw ASCII (used by parser) ──────────

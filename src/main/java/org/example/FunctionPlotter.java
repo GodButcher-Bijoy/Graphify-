@@ -15,7 +15,7 @@ public class FunctionPlotter {
         this.gc = gc;
     }
 
-    // ⚠️ FIXED: boundary প্যারামিটার অ্যাড করা হয়েছে
+
     public void plotEquation(String eqStr, Color color, double cx, double cy, double width, double height, BoundaryCondition boundary) {
         gc.setStroke(color);
         gc.setLineWidth(2.5);
@@ -23,11 +23,75 @@ public class FunctionPlotter {
         String eq = EquationHandler.formatEquation(eqStr);
 
         try {
-            if (eq.startsWith("y=") && !eq.contains("x=")) plotStandard(cx, cy, width, height, eq.substring(2), boundary);
-            else if (eq.startsWith("x=") && !eq.contains("y=")) plotInverse(cx, cy, width, height, eq.substring(2), boundary);
-            else if (eq.contains("=")) plotImplicit(cx, cy, width, height, eq, boundary);
-            else plotStandard(cx, cy, width, height, eq, boundary);
+            if (eq.startsWith("y=") && !eq.contains("x=")) {
+                // Canonical explicit: y = f(x)
+                plotStandard(cx, cy, width, height, eq.substring(2), boundary);
+            } else if (eq.startsWith("x=") && !eq.contains("y=")) {
+                // Canonical inverse: x = f(y)
+                plotInverse(cx, cy, width, height, eq.substring(2), boundary);
+            } else if (eq.contains("=")) {
+                // Try to rewrite as explicit y = f(x) before falling back to slow implicit
+                String rerouted = tryRewriteAsExplicit(eq);
+                if (rerouted != null) {
+                    plotStandard(cx, cy, width, height, rerouted, boundary);
+                } else {
+                    plotImplicit(cx, cy, width, height, eq, boundary);
+                }
+            } else {
+                plotStandard(cx, cy, width, height, eq, boundary);
+            }
         } catch (Exception e) {}
+    }
+
+    /**
+     * Attempts to rewrite an implicit equation as an explicit y = f(x).
+     * Handles two cases:
+     *   1. "expr = y"        → returns expr  (y is isolated on the RHS)
+     *   2. "expr - y = 0"    → returns expr  (y appears as -y on LHS, RHS is 0)
+     *      "expr + (-1)*y = 0" — same idea
+     *
+     * Returns null if the equation cannot be trivially solved for y.
+     */
+    private String tryRewriteAsExplicit(String eq) {
+        // Split on the first '='
+        int eqIdx = eq.indexOf('=');
+        if (eqIdx < 0) return null;
+        String lhs = eq.substring(0, eqIdx).trim();
+        String rhs = eq.substring(eqIdx + 1).trim();
+
+        // ── Case 1: expr = y  (RHS is exactly "y", no other y on LHS) ─────────
+        if (rhs.equals("y") && !lhs.contains("y")) {
+            return lhs;   // plot lhs as f(x)
+        }
+
+        // ── Case 2: y = expr  already handled above, but catch rhs forms ──────
+        if (lhs.equals("y") && !rhs.contains("y")) {
+            return rhs;
+        }
+
+        // ── Case 3: "expr - y = 0"  →  "expr" (LHS ends with "-y", RHS = "0") ─
+        if (rhs.equals("0")) {
+            // Check if lhs ends with "-y" (possibly with surrounding whitespace)
+            if (lhs.endsWith("-y") && !lhs.substring(0, lhs.length() - 2).contains("y")) {
+                return lhs.substring(0, lhs.length() - 2).trim();
+            }
+            // Check "+(-y)" or "-(y)" patterns
+            if (lhs.endsWith("+(-y)") && !lhs.substring(0, lhs.length() - 5).contains("y")) {
+                return lhs.substring(0, lhs.length() - 5).trim();
+            }
+        }
+
+        // ── Case 4: "expr - y = c"  →  rewrite as "expr - c" ──────────────────
+        if (lhs.endsWith("-y") && !lhs.substring(0, lhs.length() - 2).contains("y")) {
+            // expr - y = rhs  →  y = expr - rhs
+            String exprPart = lhs.substring(0, lhs.length() - 2).trim();
+            // Only safe if rhs contains no y
+            if (!rhs.contains("y")) {
+                return "(" + exprPart + ")-(" + rhs + ")";
+            }
+        }
+
+        return null;  // cannot simplify — fall back to implicit
     }
 
     private void plotStandard(double cx, double cy, double width, double height, String function, BoundaryCondition boundary) {
@@ -56,7 +120,7 @@ public class FunctionPlotter {
                 continue;
             }
 
-            // ⚠️ FIXED: বাউন্ডারি চেক অ্যাড করা হয়েছে
+
             if (boundary != null && !boundary.test(mathX, mathY, 0)) {
                 first = true;
                 prevMathY = Double.NaN;
@@ -111,7 +175,7 @@ public class FunctionPlotter {
                 continue;
             }
 
-            // ⚠️ FIXED: বাউন্ডারি চেক অ্যাড করা হয়েছে
+
             if (boundary != null && !boundary.test(mathX, mathY, 0)) {
                 first = true;
                 prevMathX = Double.NaN;
@@ -148,7 +212,7 @@ public class FunctionPlotter {
         int res = 4;
         for (double x = 0; x < width; x += res) {
             for (double y = 0; y < height; y += res) {
-                // ⚠️ FIXED: ইমপ্লিসিট ফাংশনে বাউন্ডারি চেক
+
                 if (boundary != null) {
                     double mathX = (x + res / 2.0 - cx) / appState.getScale();
                     double mathY = (cy - (y + res / 2.0)) / appState.getScale();
@@ -180,8 +244,24 @@ public class FunctionPlotter {
         }
     }
 
-    // ⚠️ FIXED: public করা হয়েছে যাতে GraphRenderer কল করতে পারে
-    public void plotParametric(String xEq, String yEq, Color color, double cx, double cy, double width, double height, BoundaryCondition boundary) {
+
+    // Overload for polar equations — caller specifies t range (e.g. 0 to 8π)
+    public void plotParametric(String xEq, String yEq, Color color,
+                               double cx, double cy, double width, double height,
+                               BoundaryCondition boundary, double tStart, double tEnd) {
+        plotParametricCore(xEq, yEq, color, cx, cy, width, height, boundary, tStart, tEnd);
+    }
+
+    // Original signature — regular parametric curves use t = -100..100
+    public void plotParametric(String xEq, String yEq, Color color,
+                               double cx, double cy, double width, double height,
+                               BoundaryCondition boundary) {
+        plotParametricCore(xEq, yEq, color, cx, cy, width, height, boundary, -100, 100);
+    }
+
+    private void plotParametricCore(String xEq, String yEq, Color color,
+                                    double cx, double cy, double width, double height,
+                                    BoundaryCondition boundary, double tStart, double tEnd) {
         gc.setStroke(color);
         gc.setLineWidth(2.5);
         gc.beginPath();
@@ -190,8 +270,6 @@ public class FunctionPlotter {
             Expression exprX = EquationHandler.buildExpression(xEq, "t", appState.getGlobalVariables());
             Expression exprY = EquationHandler.buildExpression(yEq, "t", appState.getGlobalVariables());
 
-            double tStart = -100;
-            double tEnd   = 100;
             double tStep  = 0.02; // finer step → smoother curves
 
             // How far outside the canvas we still allow a point to be drawn.
@@ -382,7 +460,7 @@ public class FunctionPlotter {
         return (v1 > 0 && v2 <= 0) || (v1 <= 0 && v2 > 0);
     }
 
-    // ⚠️ FIXED: public static class করা হয়েছে
+
     public static class BoundaryCondition {
         private class SingleCondition {
             Expression leftExpr, rightExpr;

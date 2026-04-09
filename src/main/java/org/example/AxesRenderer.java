@@ -134,11 +134,10 @@ public class AxesRenderer {
             }
         }
         // --- Origin (0,0) Numbering (Desmos Style) ---
-        // Center (intersection) jodi screen er vitore thake, tobei 0 draw korbe
+
         if (centerX >= 0 && centerX <= width && centerY >= 0 && centerY <= height) {
             String label = "0";
 
-            // Ektu bame ar niche soriye draw korchi jate axis line er sathe overlap na hoy
             double zeroX = centerX - 12;
             double zeroY = centerY + 14;
 
@@ -273,12 +272,12 @@ public class AxesRenderer {
 
     // [NEW] Smart Number Formatter to fix 0.0 bug
     private String formatNumber(double val) {
-        // Precision theek korar jonno round kora
+
         double rounded = Math.round(val * 1e8) / 1e8;
         if (Math.abs(rounded - Math.round(rounded)) < 1e-9) {
             return String.valueOf((long) Math.round(rounded)); // Integer hole purno sonkha dekhabe
         }
-        // Doshomik er por extra 0 gula kete dibe
+
         return String.format("%.5f", rounded).replaceAll("0+$", "").replaceAll("\\.$", "");
     }
 }
